@@ -1,0 +1,155 @@
+---
+title: "ResearchQ2_Visualizations"
+output: html_document
+date: "2026-04-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#libraries
+library(haven)
+library(tidyverse)
+library(dplyr)
+
+```
+
+## Research Question
+
+Is there a relationship between food security and bullying rates in US schools?
+
+```{r}
+
+# Source - https://stackoverflow.com/a/33204124
+# Posted by Deset, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-04-01, License - CC BY-SA 3.0
+
+zipF<- "C:/Users/nfrancis/Documents/Semester_4/Data_Science/STATA_2023-2024 NSCH Topical_CAHMI DRC.zip"
+outDir<-"C:/Users/nfrancis/Documents/Semester_4/Data_Science"
+unzip(zipF,exdir=outDir)
+
+nsch_data <- read_dta("C:/Users/nfrancis/Documents/Semester_4/Data_Science/NSCH_2023e-2024e_topical_STATA_CAHMI_DRC.dta")
+
+```
+
+```{r}
+
+# select food situation and bullying status for this table
+bully_data <- nsch_data |> 
+  select(bully_2324, FoodSit_2324)
+
+# add the descriptions for food situation indicators
+indicator_desc_bully = tibble(indicator = c(1, 2, 3, 4), Food_Situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+bully_data <- bully_data |>
+  left_join(indicator_desc_bully, by = join_by("FoodSit_2324" == "indicator"))
+
+# add the descriptions for bullying indicators
+bully_desc = tibble(indicator = c(1, 2, 3, 4, 5), Bullying_Frequency = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+
+bully_data <- bully_data |>
+  left_join(bully_desc, by = join_by("bully_2324" == "indicator"))
+  
+# take out NAs
+bully_data <- bully_data[complete.cases(bully_data), ]
+```
+
+
+
+## Visualizations
+
+Visualization 1: frequency that a student bullies and their food situation (run twice for some reason)
+```{r echo = FALSE}
+# reordering to make more sense visually
+bully_data$Food_Situation <- factor(bully_data$Food_Situation, levels = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+bully_data$Bullying_Frequency <- factor(bully_data$Bullying_Frequency, levels = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+
+#plotting bullying frequency and food situation
+ggplot(bully_data, aes(x = Bullying_Frequency, fill = Food_Situation))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 35, vjust = 1, hjust = 1))+
+  labs(title = "Bullying Frequency and Food Situation", fill = "Food Situation")+
+  xlab("Bullying Frequency (the student bullies another)")+
+  ylab("Proportion of children ages 6-17")
+
+```
+This visualization shows a trend between the food situation of the student and how often they bully others. There appears to be a positive correlation between students whose families struggle to provide nutritious food and students who bully others.
+
+Visualization 2: frequency of a student being bullied with their food situation
+```{r}
+# extract bullied data and food situation
+bullied_data <- nsch_data |> 
+  select(bullied_2324, FoodSit_2324)
+
+# add the descriptions for food situation indicators
+indicator_desc_bullied = tibble(indicator = c(1, 2, 3, 4), Food_Situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+bullied_data <- bullied_data |>
+  left_join(indicator_desc_bullied, by = join_by("FoodSit_2324" == "indicator"))
+
+# add the descriptions for bullied indicators
+bullied_desc = tibble(indicator = c(1, 2, 3, 4, 5), Bullied_Frequency = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+
+bullied_data <- bullied_data |>
+  left_join(bullied_desc, by = join_by("bullied_2324" == "indicator"))
+  
+# take out NAs
+bullied_data <- bullied_data[complete.cases(bullied_data), ]
+```
+
+```{r echo = FALSE}
+# reordering to make more sense visually
+bullied_data$Food_Situation <- factor(bullied_data$Food_Situation, levels = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+bullied_data$Bullied_Frequency <- factor(bullied_data$Bullied_Frequency, levels = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+#plotting bullied frequency and food situation
+ggplot(bullied_data, aes(x = Bullied_Frequency, fill = Food_Situation))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 35, vjust = 1, hjust = 1))+
+  labs(title = "Bullied Frequency and Food Situation", fill = "Food Situation")+
+  xlab("Bullied Frequency (the student is bullied by another)")+
+  ylab("Proportion of children ages 6-17")
+
+```
+This visualization shows a trend between the frequency that students are bullied by others and their food situation. Similar to the last visualization, there is a positive correlation between the frequency of bullying that a student endures and the severity of food insecurity their family faces.
+
+Visualization 3: 
+```{r}
+# select food situation and bullying status for this table
+bully_pov_data <- nsch_data |> 
+  select(bully_2324, povlev4_2324)
+
+# add the descriptions for food situation indicators
+indicator_desc_bully_pov = tibble(indicator_pov = c(1, 2, 3, 4), Poverty_level = c("0-99% of poverty level", "100%-199% of poverty level", "200%-399% of poverty level", "400% or more of poverty level"))
+
+bully_pov_data <- bully_pov_data |>
+  left_join(indicator_desc_bully_pov, by = join_by("povlev4_2324" == "indicator_pov"))
+
+# add the descriptions for bullying indicators
+bully_pov_desc = tibble(indicator = c(1, 2, 3, 4, 5), Bullying_Frequency = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+
+bully_pov_data <- bully_pov_data |>
+  left_join(bully_pov_desc, by = join_by("bully_2324" == "indicator"))
+  
+# take out NAs
+bully_pov_data <- bully_pov_data[complete.cases(bully_pov_data), ]
+
+# reordering to make more sense visually
+bully_pov_data$Poverty_level <- factor(bully_pov_data$Poverty_level, levels = c("0-99% of poverty level", "100%-199% of poverty level", "200%-399% of poverty level", "400% or more of poverty level"))
+
+bully_pov_data$Bullying_Frequency <- factor(bully_pov_data$Bullying_Frequency, levels = c("Never (past 12 months)", "One or two times (past 12 months)", "One or two times per month", "One or two times per week", "Almost every day"))
+
+#plotting bullied frequency and food situation
+ggplot(bully_pov_data, aes(x = Bullying_Frequency, fill = Poverty_level))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 35, vjust = 1, hjust = 1))+
+  labs(title = "Bullying Frequency and Poverty Level", fill = "Poverty Level")+
+  xlab("Bullying Frequency (the student bullies another)")+
+  ylab("Proportion of children ages 6-17")
+
+
+```
+
