@@ -1,0 +1,107 @@
+---
+title: "grades_foodsecurity_viz"
+output: html_document
+date: "2026-04-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#libraries
+library(haven)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+## Research Question
+
+What are the trends between the food security of children below age 10 in the US and educational performance (such as grades)?
+
+```{r}
+nsch_data <- read_dta("C:/Users/nfrancis/Documents/Semester_4/Data_Science/NSCH_2023e-2024e_topical_STATA_CAHMI_DRC.dta")
+```
+
+```{r}
+# select food situation and child grade for this table
+grades_data <- nsch_data |> 
+  select(grades6to11_2324, FoodSit_2324)
+
+# add the descriptions for grade indicators
+indicator_grades = tibble(indicator_grades = c(1, 2, 3, 4, 5), Grade = c("Mostly A's", "Mostly
+A's and B's", "Mostly
+B’s and C’s", "Mostly
+C's and D's or lower", "Child’s school does 
+not give these grades"))
+
+grades_data <- grades_data |>
+  left_join(indicator_grades, by = join_by("grades6to11_2324" == "indicator_grades"))
+
+# add the descriptions for food situation indicators
+indicator_food = tibble(indicator_food = c(1, 2, 3, 4), Food_Situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+grades_data <- grades_data |>
+  left_join(indicator_food, by = join_by("FoodSit_2324" == "indicator_food"))
+  
+# take out NAs
+grades_data <- grades_data[complete.cases(grades_data), ]
+```
+
+```{r}
+ggplot(grades_data, aes(x = Grade))+
+  geom_bar()+
+  facet_wrap(~Food_Situation, scales = "free_y")+
+  theme(axis.text.x = element_text(size = 6))+
+  labs(title = "Child Grade and Food Situation")
+```
+
+This visualization highlights that children who receive nutritious food frequently have higher grades. The graph showing grades of children who always receive nutritious food is the only one where more children score mostly A’s than children who score mostly A’s and B’s.
+
+
+```{r}
+grades_data$Food_Situation <- factor(grades_data$Food_Situation, levels = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+ggplot(grades_data, aes(x = Food_Situation, fill = Grade))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  labs(title = "Food Situation and Grade Frequency")
+```
+
+This shows a trend between low grades and the food situation of the child, as the proportion of children who have low grades increases with food insecurity.
+
+```{r}
+# select food situation and OLDER child grade for this table
+grades_old_data <- nsch_data |> 
+  select(grades12to17_2324, FoodSit_2324)
+
+# add the descriptions for grade indicators
+indicator_grades = tibble(indicator_grades = c(1, 2, 3, 4, 5), Grade = c("Mostly A's", "Mostly
+A's and B's", "Mostly
+B’s and C’s", "Mostly
+C's and D's or lower", "Child’s school does 
+not give these grades"))
+
+grades_old_data <- grades_old_data |>
+  left_join(indicator_grades, by = join_by("grades12to17_2324" == "indicator_grades"))
+
+# add the descriptions for food situation indicators
+indicator_food = tibble(indicator_food = c(1, 2, 3, 4), Food_Situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+grades_old_data <- grades_old_data |>
+  left_join(indicator_food, by = join_by("FoodSit_2324" == "indicator_food"))
+  
+# take out NAs
+grades_old_data <- grades_old_data[complete.cases(grades_old_data), ]
+```
+
+```{r}
+grades_old_data$Food_Situation <- factor(grades_old_data$Food_Situation, levels = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+ggplot(grades_old_data, aes(x = Food_Situation, fill = Grade))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  labs(title = "Food Situation for Older Children and Grade Frequency")
+```
+
