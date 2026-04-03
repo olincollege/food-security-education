@@ -1,0 +1,112 @@
+---
+title: "food_edu_brazil_viz"
+output: html_document
+---
+
+```{r}
+
+#read the data
+df_port = read.csv("PNAD.csv")
+
+#load libraries
+library(tidyverse)
+
+
+```
+
+
+```{r}
+df_en <- df_port %>%
+  rename(
+    age = idade,
+    state = sigla_uf,
+    family_size = numero_membros_familia,
+    years_of_study = anos_estudo,
+    current_grade_level = serie_frequentada,
+    education_level = grau_frequentado,
+    attends_school = frequenta_escola,
+    income = renda_mensal_todas_fontes_deflacionado,
+    sex = sexo,
+    race = raca_cor
+  ) %>%
+  mutate(
+    attends_school = factor(attends_school,levels = c(0, 1),labels = c("No", "Yes")),
+    sex = factor(sex,levels = c(0, 1),labels = c("Female", "Male")),
+race = factor(race,levels = c(0, 2, 4, 6, 8), labels = c("Indigenous", "White", "Black", "Asian", "Brown")),
+    income_group = case_when(
+      income >= 0 & income <= 210 ~ "Extreme Poverty",
+      income <= 660 ~ "Poverty",
+      income <= 8300 ~ "Middle Class",
+      TRUE ~ "Higher Income"
+    ),
+    income_group = factor(income_group, levels = c("Extreme Poverty", "Poverty", "Middle Class", "Higher Income")),
+    expected_years = age - 6,
+    learning_gap = expected_years - years_of_study
+  ) 
+```
+
+
+```{r}
+
+#Visualization 1: State vs Income
+
+state_income <- df_en %>%
+  group_by(state) %>%
+  summarise(avg_income = mean(income, na.rm = TRUE)) %>%
+  arrange(avg_income)
+
+
+
+ggplot(state_income, aes(x = reorder(state, avg_income), y = avg_income)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Average Household Income by State for Households with Children Ages 6 to 10",
+    x = "State",
+    y = "Average Income"
+  ) +
+  theme_classic()
+
+```
+
+
+```{r}
+# Visualization 2: Grade Gap by income group
+df_en %>%
+  group_by(income_group) %>%
+  summarise(avg_gap = mean(learning_gap, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(income_group, avg_gap), y = avg_gap, fill = income_group))+
+  geom_col() +
+  labs(
+    title = "Average Learning Gap by Income Group for Children Ages 6 to 11",
+    x = NULL,
+    y = "Average Learning Gap",
+    fill = "Income Group"
+  ) +
+  coord_flip() +
+  theme_classic()+
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank())
+
+```
+
+
+```{r}
+learning_gap_race <- df_en %>%
+  filter(!is.na(learning_gap), !is.na(race)) %>%
+  group_by(income_group, race) %>%
+  summarise(avg_gap = mean(learning_gap, na.rm = TRUE), .groups = "drop")
+
+ggplot(learning_gap_race, aes(x = income_group, y = avg_gap, fill = race)) +
+  geom_col(position = "dodge", color = "white") +
+  labs(
+    title = "Average Learning Gap by Income Group and Race for Children Ages 6 to 11",
+    x = "Income Group",
+    y = "Average Learning Gap",
+    fill = "Race"
+  ) +
+  theme_classic()
+```
+
+
