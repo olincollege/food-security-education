@@ -4,8 +4,6 @@ output: html_document
 date: "2026-04-01"
 ---
 
-TESTING CHANGE
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```

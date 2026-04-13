@@ -1,0 +1,70 @@
+---
+title: "Regression_modeling"
+output: html_document
+date: "2026-04-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#libraries
+library(haven)
+library(tidyverse)
+library(dplyr)
+
+```
+
+Load and select the data:
+```{r}
+nsch_data <- read_dta("C:/Users/nfrancis/Documents/Semester_4/Data_Science/NSCH_2023e-2024e_topical_STATA_CAHMI_DRC.dta")
+
+# the format of the data is already in numerical catergories.
+model_data <- nsch_data |> 
+  select(bullied_2324, FoodSit_2324, grades6to11_2324, ADHDSevInd_2324)
+```
+
+Clean up the data
+```{r}
+# take out NA values
+model_data <- model_data[complete.cases(model_data), ]
+
+#filter out schools that do not give letter grades
+model_data <- model_data |>
+  filter(!grades6to11_2324 == 5)
+
+# make the data numeric
+model_data$grades6to11_2324 <- as.numeric(model_data$grades6to11_2324)
+model_data$FoodSit_2324 <- as.numeric(model_data$FoodSit_2324)
+model_data$bullied_2324 <- as.numeric(model_data$bullied_2324)
+model_data$ADHDSevInd_2324 <- as.numeric(model_data$ADHDSevInd_2324)
+
+#make is so that grades increase with number
+grades_ordered = tibble(indicator = c(1, 2, 3, 4), order = c(4, 3, 2, 1))
+
+model_data <- model_data |>
+  left_join(grades_ordered, by = join_by("grades6to11_2324" == "indicator"))
+```
+
+## MODEL
+Response Variable = Grades
+Explanatory Variables = Food insecurity, Bullied, ADHD, poverty level?
+
+```{r}
+grades_model <- lm(order~1 + FoodSit_2324+bullied_2324 + ADHDSevInd_2324, data = model_data)
+summary(grades_model)
+```
+Visualize categories (bullied and food situation)
+```{r}
+ggplot(model_data, aes(y=order, x=bullied_2324)) + 
+    geom_smooth(method='lm',se=FALSE,size=2)+
+  facet_wrap(~FoodSit_2324)
+```
+
+Visualize categories (bullied and ADHD)
+```{r}
+ggplot(model_data, aes(y=order, x=bullied_2324)) + 
+    geom_smooth(method='lm',se=FALSE,size=2)+
+  facet_wrap(~ADHDSevInd_2324)
+```
