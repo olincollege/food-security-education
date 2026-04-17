@@ -1,6 +1,6 @@
 ---
 title: "| Data Science With an Eye Towards Sustainability    \n| P7: Project Check-In and Research Questions Update\n"
-author: "INSERT STUDENT NAMES HERE"
+author: "Gabrielle Arrache and Naomi Francis"
 output:
   bookdown::html_document2:
     split_by: none
@@ -23,15 +23,26 @@ Also, if you are using one, write down your GitHub repository.
 
 \
 
+We are using Github to work on shared RMD.
+Github Repository: https://github.com/olincollege/food-security-education/ 
+We are meeting either on Tuesday, Thursday or Sundays to work on the project.
+
+
+
+
 # Team Health and Progress
 
 Please take a few minutes to reflect collectively on how things have been going so far in terms of working together as a team. What has worked well? What hasn't? Are there work flow changes you want to make for the remainder of the project?
+
+Our meetings have been working well to get work done and decide on model settings together, ensuring alignment. We have also created a Trello board to track progress, plan, and see what each person is working on.
+
 
 \
 
 # Refined Research Questions
 
 Please specify your updated research question(s) here. At this point, I am expecting 1-4 research questions that are more closely connected.
+
 
 \
 
