@@ -36,6 +36,8 @@ Please take a few minutes to reflect collectively on how things have been going 
 
 Our meetings have been working well to get work done and decide on model settings together, ensuring alignment. We have also created a Trello board to track progress, plan, and see what each person is working on.
 
+Trello Link: https://trello.com/invite/b/69de7c8026a66b1794048655/ATTI221ae1fce3cd2eb600d16aa7b1d896a80726A1C1/data-science-project 
+
 
 \
 
