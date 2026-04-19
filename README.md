@@ -1,4 +1,5 @@
 # food-security-education
 
-## Naomi
-I hope to learn about how food security impacts students confidence in school.
+## 
+Data files are not included in this repository due to size and licensing constraints. 
+Please download the NSCH datasets separately and place them in the data/raw/ folder.
