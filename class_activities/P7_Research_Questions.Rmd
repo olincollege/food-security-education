@@ -81,6 +81,42 @@ Joining with other data: We don't plan on using data from other datasets becuase
 
 Restate research question 1. Construct 3-4 relevant visualizations that provide insight on / help answer this question and piece these together to tell a short story. For each visualization, 1-2 sentences will suffice.
 
+1) What factors in a child's life most significantly impact their grades?
+
+```{r}
+library(readr)
+
+# not in the class activities folder - should we move out of the class activities folder? or is it okay to cope the data into this folder?
+
+df_23_24 <- read_csv("data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
+df_21_22 <- read_csv("data/raw/2021-2022 NSCH_Topical_DRC_CAHMI_v3.csv")
+df_20 <- read_csv("data/raw/NSCH_2020e_Topical_CAHMI_DRCv3.csv")
+df_18_19 <- read_csv("data/raw/NSCH_2018e_2019e_Topical_CAHMI_DRCv3.csv")
+
+
+names(df_21_22)
+names(df_23_24)
+names(df_18_19)
+names(df_20)
+```
+
+```{r}
+#are we joining all years together? are we joining ages as well?
+
+ggplot(df_23_24, aes(x = grades6to11))+
+  geom_bar()+
+  facet_wrap(~Food_Situation, scales = "free_y")+
+  theme(axis.text.x = element_text(size = 6))+
+  labs(title = "Child Grade and Food Situation")
+
+# child health condition and grade
+ggplot(df_23_24, aes(x = Cond2more_2324, y = grades6to11))+
+  geom_col()+
+  theme(axis.text.x = element_text(size = 6))+
+  labs(title = "Child Conditions and Grades")
+```
+
+
 \
 
 # Research Question 2 (and possibly 3 and 4)
