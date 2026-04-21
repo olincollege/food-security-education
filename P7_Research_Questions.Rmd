@@ -101,16 +101,24 @@ names(df_20)
 ```
 
 ```{r}
+#clean up the data
+
+```
+
+
+```{r}
 #are we joining all years together? are we joining ages as well?
 
-ggplot(df_23_24, aes(x = grades6to11))+
+library(ggplot2)
+
+ggplot(df_23_24, aes(x = grades6to11_2324))+
   geom_bar()+
-  facet_wrap(~Food_Situation, scales = "free_y")+
+  facet_wrap(~FoodSit_2324, scales = "free_y")+
   theme(axis.text.x = element_text(size = 6))+
   labs(title = "Child Grade and Food Situation")
 
 # child health condition and grade
-ggplot(df_23_24, aes(x = Cond2more_2324, y = grades6to11))+
+ggplot(df_23_24, aes(x = Cond2more_2324, y = grades6to11_2324))+
   geom_col()+
   theme(axis.text.x = element_text(size = 6))+
   labs(title = "Child Conditions and Grades")
