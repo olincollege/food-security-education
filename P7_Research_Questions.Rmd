@@ -88,27 +88,25 @@ df_23_24 <- read_csv("data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
 df_21_22 <- read_csv("data/raw/2021-2022 NSCH_Topical_DRC_CAHMI_v3.csv")
 df_20 <- read_csv("data/raw/NSCH_2020e_Topical_CAHMI_DRCv3.csv")
 df_18_19 <- read_csv("data/raw/NSCH_2018e_2019e_Topical_CAHMI_DRCv3.csv")
-
-
-names(df_21_22)
-names(df_23_24)
-names(df_18_19)
-names(df_20)
 ```
 
 ```{r}
+library(dplyr)
 #select variables of interest
+
+#had to remove race7_2324
 allfactors_23_24 <- df_23_24 |> 
-  select(ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, race7_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324)
+  select(grades6to11_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324)
 
 allfactors_21_22 <- df_21_22 |> 
-  select(ChHlthSt_2122, LowBWght_2122, PhysAct_2122, Cond2more_2122, CSHCN_2122, ADHDind_2122, ADHDSevInd_2122, ASDSevInd_2122, bullied_2122, bully_2122, MakeFriend_2122, MEDB10ScrQ5_2122, MedCare_2122, MentHCare_2122, SpEducPln_2122, ReptGrade_2122, povlev4_2122, race7_2122, age5_2122, sex_2122, FoodSit_2122, FoodCash_2122)
+  select(SchlEngage_2122, ChHlthSt_2122, LowBWght_2122, PhysAct_2122, Cond2more_2122, CSHCN_2122, ADHDind_2122, ADHDSevInd_2122, ASDSevInd_2122, bullied_2122, bully_2122, MakeFriend_2122, MEDB10ScrQ5_2122, MedCare_2122, MentHCare_2122, SpEducPln_2122, ReptGrade_2122, povlev4_2122, race7_2122, age5_2122, sex_2122, FoodSit_2122, FoodCash_2122)
 
 allfactors_20 <- df_20 |> 
-  select(ChHlthSt_20, LowBWght_20, PhysAct_20, Cond2more_20, CSHCN_20, ADHDind_20, ADHDSevInd_20, ASDSevInd_20, bullied_20, bully_20, MakeFriend_20, MEDB10ScrQ5_20, MedCare_20, MentHCare_20, SpEducPln_20, ReptGrade_20, povlev4_20, race7_20, age5_20, sex_20, FoodSit_20, FoodCash_20)
+  select(SchlEngage_20, ChHlthSt_20, LowBWght_20, PhysAct_20, Cond2more_20, CSHCN_20, ADHDind_20, ADHDSevInd_20, ASDSevInd_20, bullied_20, bully_20, MakeFriend_20, MEDB10ScrQ5_20, MedCare_20, MentHCare_20, SpEducPln_20, ReptGrade_20, povlev4_20, race7_20, age5_20, sex_20, FoodSit_20, FoodCash_20)
 
+#no medcare variable in this dataset
 allfactors_18_19 <- df_18_19 |> 
-  select(ChHlthSt_1819, LowBWght_1819, PhysAct_1819, Cond2more_1819, CSHCN_1819, ADHDind_1819, ADHDSevInd_1819, ASDSevInd_1819, bullied_1819, bully_1819, MakeFriend_1819, MEDB10ScrQ5_1819, MedCare_1819, MentHCare_1819, SpEducPln_1819, ReptGrade_1819, povlev4_1819, race7_1819, age5_1819, sex_1819, FoodSit_1819, FoodCash_1819)
+  select(SchlEngage_1819, ChHlthSt_1819, LowBWght_1819, PhysAct_1819, Cond2more_1819, CSHCN_1819, ADHDind_1819, ADHDSevInd_1819, ASDSevInd_1819, bullied_1819, bully_1819, MakeFriend_1819, MEDB10ScrQ5_1819, MentHCare_1819, SpEducPln_1819, ReptGrade_1819, povlev4_1819, race7_1819, age5_1819, sex_1819, FoodSit_1819, FoodCash_1819)
 
 df_23_24 <- df_23_24[complete.cases(df_23_24), ]
 df_21_22 <- df_21_22[complete.cases(df_21_22), ]
@@ -122,14 +120,14 @@ df_18_19 <- df_18_19[complete.cases(df_18_19), ]
 
 library(ggplot2)
 
-ggplot(df_23_24, aes(x = grades6to11_2324))+
+ggplot(allfactors_23_24, aes(x = grades6to11_2324))+
   geom_bar()+
   facet_wrap(~FoodSit_2324, scales = "free_y")+
   theme(axis.text.x = element_text(size = 6))+
   labs(title = "Child Grade and Food Situation")
 
 # child health condition and grade
-ggplot(df_23_24, aes(x = Cond2more_2324, y = grades6to11_2324))+
+ggplot(allfactors_23_24, aes(x = Cond2more_2324, y = grades6to11_2324))+
   geom_col()+
   theme(axis.text.x = element_text(size = 6))+
   labs(title = "Child Conditions and Grades")
