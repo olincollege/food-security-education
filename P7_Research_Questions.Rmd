@@ -120,19 +120,67 @@ df_18_19 <- df_18_19[complete.cases(df_18_19), ]
 
 library(ggplot2)
 
-ggplot(allfactors_23_24, aes(x = grades6to11_2324))+
+# clean the data for the visualization
+allfactors_23_24 <- allfactors_23_24 |>
+  filter(!Cond2more_2324==99) |> # filter out missing values in Cond2more_2324
+  filter(grades6to11_2324 %in% c(1, 2, 3, 4)) |>  # filter out missing values/no grade in grades6to11_2324
+  filter(FoodSit_2324 %in% c(1, 2, 3, 4)) |>
+  mutate(Cond2more_2324 = as.character(Cond2more_2324))
+
+# interpret the number meaning of the grade
+grade_meaning = tibble(grade_code = c(1, 2, 3, 4), grade_meaning = c("Mostly A's", "Mostly A's and B's", "Mostly B’s and C’s", "Mostly C's and D's or lower"))
+  
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(grade_meaning, by = join_by(`grades6to11_2324` == `grade_code`))
+
+# interpret the number meaning of the condition status
+condition_meaning = tibble(condition_code = c("1", "2", "3"), condition_meaning = c("Does not have condition", "Ever told, but no current condition", "Currently has condition"))
+  
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(condition_meaning, by = join_by(`Cond2more_2324` == `condition_code`))
+
+foodsecurity_meaning = tibble(foodsecurity_code = c(1, 2, 3, 4), food_situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(foodsecurity_meaning, by = join_by("FoodSit_2324" == "foodsecurity_code"))
+
+```
+
+```{r}
+library(ggplot2)
+library(forcats)
+
+# food security and grade
+ggplot(allfactors_23_24, aes(x = grade_meaning))+
   geom_bar()+
-  facet_wrap(~FoodSit_2324, scales = "free_y")+
+  facet_wrap(~food_situation, scales = "free_y")+
   theme(axis.text.x = element_text(size = 6))+
   labs(title = "Child Grade and Food Situation")
 
-# child health condition and grade
-ggplot(allfactors_23_24, aes(x = Cond2more_2324, y = grades6to11_2324))+
-  geom_col()+
+# child health condition and grade visual
+allfactors_23_24 <- allfactors_23_24 |>
+  group_by(condition_meaning) |>
+  mutate(condition_meaning = fct_relevel(condition_meaning, "Does not have condition", "Ever told, but no current condition", "Currently has condition")) |>
+  group_by(food_situation) |>
+  mutate(food_situation = fct_relevel(food_situation, "Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+ggplot(allfactors_23_24, aes(x = condition_meaning, fill = grade_meaning))+
+  geom_bar(position = "fill")+
   theme(axis.text.x = element_text(size = 6))+
-  labs(title = "Child Conditions and Grades")
+  labs(title = "Child Medical Conditions and Grades")
+
+#looking at food security vs condition
+ggplot(allfactors_23_24, aes(x = food_situation, fill = condition_meaning))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(size = 6, hjust = 1, vjust = 1, angle = 45))+
+  labs(title = "Food Situation and Medical Conditions")
 ```
 
+The first visualization shows that more children who are always food secure receive mostly A's than any other grading bracket. For every other category of food security, this is not true. 
+
+The second visualization shows that students with a condition such as allergies, autoimmune diseases, Down syndrome, anxiety problems, depression, speech and language problems, and ADHD have a higher proportion of students with lower grades.
+
+The third visualization shows that there is a higher proportion of children with a medical condition that are also food insecure than children who are food secure. This suggests that children dealing with food insecurity are more likely to experience a medical condition that may hinder their learning.
 
 \
 
@@ -152,3 +200,8 @@ Identify next steps in your analysis. Do you need additional data? Do you need t
 
 Summarize each group member's specific contributions to this checkpoint assignment.
 
+Both: Connections to sustainability and figuring out Github. 
+
+Naomi: Created visualizations surrounding research question 1.
+
+Gabi: Loading the data in a reproducible way considering access restrictions and size constraints using gitignore. Created a data folder with the downloaded data and codebooks.
