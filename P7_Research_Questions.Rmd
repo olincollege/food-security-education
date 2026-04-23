@@ -1,0 +1,207 @@
+---
+title: "| Data Science With an Eye Towards Sustainability    \n| P7: Project Check-In and Research Questions Update\n"
+author: "Gabrielle Arrache and Naomi Francis"
+output:
+  bookdown::html_document2:
+    split_by: none
+    toc: no
+
+---
+
+
+ 
+
+It is time for another project checkpoint. By now, your research questions should be significantly narrowed, and you should be well on your way to developing some visualizations to answer at least some of the research questions. **Each group should hand in one html document for the following exercises.**
+
+\
+
+# Names & Workflow
+
+List all group members. Discuss a plan for completing this assignment. How will you put together your shared Rmd? How will you divide the work? When will you meet to work on the assignment? Write this down in your Rmd.
+
+Also, if you are using one, write down your GitHub repository.
+
+\
+
+We are using Github to work on shared RMD.
+Github Repository: https://github.com/olincollege/food-security-education/ 
+We are meeting either on Tuesday, Thursday or Sundays to work on the project.
+
+
+
+
+# Team Health and Progress
+
+Please take a few minutes to reflect collectively on how things have been going so far in terms of working together as a team. What has worked well? What hasn't? Are there work flow changes you want to make for the remainder of the project?
+
+Our meetings have been working well to get work done and decide on model settings together, ensuring alignment. We have also created a Trello board to track progress, plan, and see what each person is working on.
+
+Trello Link: https://trello.com/invite/b/69de7c8026a66b1794048655/ATTI221ae1fce3cd2eb600d16aa7b1d896a80726A1C1/data-science-project 
+
+
+\
+
+# Refined Research Questions
+
+Please specify your updated research question(s) here. At this point, I am expecting 1-4 research questions that are more closely connected.
+
+1) What factors in a child's life most significantly impact their grades?
+- can have specific sub questions if needed
+\
+
+# Connections to Sustainability
+
+How are your research questions connected to sustainability? What are your personal learning goals related to sustainability for this project? You may wish to refer back to the [UN Sustainable Development Goals](https://sdgs.un.org/goals), the [Inner Development Goals](https://innerdevelopmentgoals.org/), and the [Engineering for One Planet](https://engineeringforoneplanet.org/wp-content/uploads/EOP_Framework_2023.pdf?), [Six Pillars of Climate Justice](https://centerclimatejustice.universityofcalifornia.edu/what-is-climate-justice/), and [Just Transition Principles](https://climatejusticealliance.org/just-transition/) frameworks. As a team, what sustainability background, analysis, and  storytellling do you want to include in the scope of your project and in your final artifacts?
+
+According to Hannah Ritchie, sustainability means providing a good quality of life for people today while protecting the future. However, many children in the US still experience food insecurity, which shows that this goal is not being achieved.
+This topic connects to UN SDG #2 (Zero Hunger) and SDG #4 (Quality Education), and we are addressing how proper nutrition affects people early in life. By investigating the relationships between food security and educational performance, we can highlight the importance of nutrition and sources of high nutrition.
+As a team, our goal is to better understand how inequalities like food insecurity impact education and long-term opportunities. We want to include data analysis and storytelling that make these inequalities visible and easier to understand. Our project aims to understand whether children are living sustainably today, and to explore how access to food and education may influence more sustainable futures. 
+Through exploration of our data so far, we've noticed a seemingly positive correlation between food security and academic performance. Knowing that grades can sometimes help with obtaining careers through scholarships, internships, and access to education, we are making a connection between sustainability in children's lives today and sustainability in their future.
+
+\
+
+# Data
+
+Identify the data sets you are using to explore the research questions above. These data sets may already be in csv form, you may acquire them (e.g., scraped with rvest, via public API, or from an SQL database), or you may plan on collecting some extra data. For each data set, summarize the following:
+
+We are using National Survey of Children's Health datasets from 2016-2024. We sent an inquiry to use this data and were able to download it after that.
+
+Data Source: National Surcey of Chilren's Health
+Data Description: The data measures several metrics relating to children’s health, under the categories of physical health, mental and emotional health, healthcare access, schooling, family health, safety, and demographics.
+Data limitations: There is no geographic information in this dataset, which would have been interesting for us to look at because of food security rates in different states or areas of the country.
+Data dimensions: This is a large dataset, with 878 variables and 106,537 entries.
+Joining with other data: This data has demographic information such as sex, race, and ethnicity, which can be joined with other datasets, as well as the state of residence of the child, which can be combined with many other datasets.
+Joining with other data: We don't plan on using data from other datasets because of the amount of information in this one. We may join the data from different years and group by a specific variable.
+
+\
+
+# Research Question 1
+
+Restate research question 1. Construct 3-4 relevant visualizations that provide insight on / help answer this question and piece these together to tell a short story. For each visualization, 1-2 sentences will suffice.
+
+1) What factors in a child's life most significantly impact their grades?
+
+```{r}
+library(readr)
+
+df_23_24 <- read_csv("data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
+df_21_22 <- read_csv("data/raw/2021-2022 NSCH_Topical_DRC_CAHMI_v3.csv")
+df_20 <- read_csv("data/raw/NSCH_2020e_Topical_CAHMI_DRCv3.csv")
+df_18_19 <- read_csv("data/raw/NSCH_2018e_2019e_Topical_CAHMI_DRCv3.csv")
+```
+
+```{r}
+library(dplyr)
+#select variables of interest
+
+#had to remove race7_2324
+allfactors_23_24 <- df_23_24 |> 
+  select(grades6to11_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324)
+
+allfactors_21_22 <- df_21_22 |> 
+  select(SchlEngage_2122, ChHlthSt_2122, LowBWght_2122, PhysAct_2122, Cond2more_2122, CSHCN_2122, ADHDind_2122, ADHDSevInd_2122, ASDSevInd_2122, bullied_2122, bully_2122, MakeFriend_2122, MEDB10ScrQ5_2122, MedCare_2122, MentHCare_2122, SpEducPln_2122, ReptGrade_2122, povlev4_2122, race7_2122, age5_2122, sex_2122, FoodSit_2122, FoodCash_2122)
+
+allfactors_20 <- df_20 |> 
+  select(SchlEngage_20, ChHlthSt_20, LowBWght_20, PhysAct_20, Cond2more_20, CSHCN_20, ADHDind_20, ADHDSevInd_20, ASDSevInd_20, bullied_20, bully_20, MakeFriend_20, MEDB10ScrQ5_20, MedCare_20, MentHCare_20, SpEducPln_20, ReptGrade_20, povlev4_20, race7_20, age5_20, sex_20, FoodSit_20, FoodCash_20)
+
+#no medcare variable in this dataset
+allfactors_18_19 <- df_18_19 |> 
+  select(SchlEngage_1819, ChHlthSt_1819, LowBWght_1819, PhysAct_1819, Cond2more_1819, CSHCN_1819, ADHDind_1819, ADHDSevInd_1819, ASDSevInd_1819, bullied_1819, bully_1819, MakeFriend_1819, MEDB10ScrQ5_1819, MentHCare_1819, SpEducPln_1819, ReptGrade_1819, povlev4_1819, race7_1819, age5_1819, sex_1819, FoodSit_1819, FoodCash_1819)
+
+df_23_24 <- df_23_24[complete.cases(df_23_24), ]
+df_21_22 <- df_21_22[complete.cases(df_21_22), ]
+df_20 <- df_20[complete.cases(df_20), ]
+df_18_19 <- df_18_19[complete.cases(df_18_19), ]
+```
+
+
+```{r}
+#are we joining all years together? are we joining ages as well?
+
+library(ggplot2)
+
+# clean the data for the visualization
+allfactors_23_24 <- allfactors_23_24 |>
+  filter(!Cond2more_2324==99) |> # filter out missing values in Cond2more_2324
+  filter(grades6to11_2324 %in% c(1, 2, 3, 4)) |>  # filter out missing values/no grade in grades6to11_2324
+  filter(FoodSit_2324 %in% c(1, 2, 3, 4)) |>
+  mutate(Cond2more_2324 = as.character(Cond2more_2324))
+
+# interpret the number meaning of the grade
+grade_meaning = tibble(grade_code = c(1, 2, 3, 4), grade_meaning = c("Mostly A's", "Mostly A's and B's", "Mostly B’s and C’s", "Mostly C's and D's or lower"))
+  
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(grade_meaning, by = join_by(`grades6to11_2324` == `grade_code`))
+
+# interpret the number meaning of the condition status
+condition_meaning = tibble(condition_code = c("1", "2", "3"), condition_meaning = c("Does not have condition", "Ever told, but no current condition", "Currently has condition"))
+  
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(condition_meaning, by = join_by(`Cond2more_2324` == `condition_code`))
+
+foodsecurity_meaning = tibble(foodsecurity_code = c(1, 2, 3, 4), food_situation = c("Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+allfactors_23_24 <- allfactors_23_24 |>
+  left_join(foodsecurity_meaning, by = join_by("FoodSit_2324" == "foodsecurity_code"))
+
+```
+
+```{r}
+library(ggplot2)
+library(forcats)
+
+# food security and grade
+ggplot(allfactors_23_24, aes(x = grade_meaning))+
+  geom_bar()+
+  facet_wrap(~food_situation, scales = "free_y")+
+  theme(axis.text.x = element_text(size = 6))+
+  labs(title = "Child Grade and Food Situation")
+
+# child health condition and grade visual
+allfactors_23_24 <- allfactors_23_24 |>
+  group_by(condition_meaning) |>
+  mutate(condition_meaning = fct_relevel(condition_meaning, "Does not have condition", "Ever told, but no current condition", "Currently has condition")) |>
+  group_by(food_situation) |>
+  mutate(food_situation = fct_relevel(food_situation, "Always get enough nutritious food", "Always enough food but not nutritious", "Sometimes not enough food", "Often not enough"))
+
+ggplot(allfactors_23_24, aes(x = condition_meaning, fill = grade_meaning))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(size = 6))+
+  labs(title = "Child Medical Conditions and Grades")
+
+#looking at food security vs condition
+ggplot(allfactors_23_24, aes(x = food_situation, fill = condition_meaning))+
+  geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(size = 6, hjust = 1, vjust = 1, angle = 45))+
+  labs(title = "Food Situation and Medical Conditions")
+```
+
+The first visualization shows that more children who are always food secure receive mostly A's than any other grading bracket. For every other category of food security, this is not true. 
+
+The second visualization shows that students with a condition such as allergies, autoimmune diseases, Down syndrome, anxiety problems, depression, speech and language problems, and ADHD have a higher proportion of students with lower grades.
+
+The third visualization shows that there is a higher proportion of children with a medical condition that are also food insecure than children who are food secure. This suggests that children dealing with food insecurity are more likely to experience a medical condition that may hinder their learning.
+
+\
+
+# Research Question 2 (and possibly 3 and 4)
+
+Repeat the previous exercise for your second and possibly third or fourth research questions. Make a new section for each question.
+
+\
+
+# Next Steps
+
+Identify next steps in your analysis. Do you need additional data? Do you need to do more cleaning or wrangling? Do you need to do some statistical modeling and inference? What additional visualizations would be helpful? How are the stories coming together? 
+
+\
+
+# Contributions
+
+Summarize each group member's specific contributions to this checkpoint assignment.
+
+Both: Connections to sustainability and figuring out Github. 
+
+Naomi: Created visualizations surrounding research question 1.
+
+Gabi: Loading the data in a reproducible way considering access restrictions and size constraints using gitignore. Created a data folder with the downloaded data and codebooks.
