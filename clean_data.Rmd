@@ -1,0 +1,15 @@
+---
+title: "clean_data"
+output: html_document
+---
+
+```{r}
+
+df_23_24_clean <- allfactors_23_24 %>%
+  
+
+
+
+
+```
+
