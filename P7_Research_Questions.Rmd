@@ -55,7 +55,7 @@ How are your research questions connected to sustainability? What are your perso
 
 According to Hannah Ritchie, sustainability means providing a good quality of life for people today while protecting the future. However, many children in the US still experience food insecurity, which shows that this goal is not being achieved.
 This topic connects to UN SDG #2 (Zero Hunger) and SDG #4 (Quality Education), and we are addressing how proper nutrition affects people early in life. By investigating the relationships between food security and educational performance, we can highlight the importance of nutrition and sources of high nutrition.
-As a team, our goal is to better understand how inequalities like food insecurity impact education and long-term opportunities. We want to include data analysis and storytelling that make these inequalities visible and easier to understand. Our project aims to understand whether children are living sustainably today, and to explore how access to food and education may influence more sustainable futures. 
+As a team, our goal is to better understand how inequalities like food insecurity impact education and long-term opportunities. We want to include data analysis and storytelling that make these inequalities visible and easier to understand. Our project aims to understand whether children are living sustainable today, and to explore how access to food and education may influence more sustainable futures. 
 Through exploration of our data so far, we've noticed a seemingly positive correlation between food security and academic performance. Knowing that grades can sometimes help with obtaining careers through scholarships, internships, and access to education, we are making a connection between sustainability in children's lives today and sustainability in their future.
 
 \
@@ -182,17 +182,57 @@ The second visualization shows that students with a condition such as allergies,
 
 The third visualization shows that there is a higher proportion of children with a medical condition that are also food insecure than children who are food secure. This suggests that children dealing with food insecurity are more likely to experience a medical condition that may hinder their learning.
 
-\
+```{r}
+library(ggplot2)
+library(GGally)
 
-# Research Question 2 (and possibly 3 and 4)
 
-Repeat the previous exercise for your second and possibly third or fourth research questions. Make a new section for each question.
+df_23_24_clean <- allfactors_23_24 %>%
+  filter(if_all(everything(), ~ . != 99)) %>% # removes rows that contain 99
+  select(
+    grades6to11_2324,
+    FoodSit_2324,
+    FoodCash_2324,
+    ChHlthSt_2324,
+    PhysAct_2324,
+    povlev4_2324
+  )
+
+lowerFn <- function(data, mapping, method = "lm", ...) {
+  ggplot(data = data, mapping = mapping) +
+    geom_point(colour = "blue", alpha = 0.4) +
+    geom_smooth(method = method, color = "red", se = FALSE, ...)
+}
+
+ggpairs(
+  df_23_24_clean,
+  lower = list(continuous = wrap(lowerFn, method = "lm")),
+  diag = list(continuous = wrap("barDiag", colour = "blue", bins = 10)),
+  upper = list(continuous = wrap("cor", size = 5))
+)
+
+
+
+
+
+```
+
 
 \
 
 # Next Steps
 
 Identify next steps in your analysis. Do you need additional data? Do you need to do more cleaning or wrangling? Do you need to do some statistical modeling and inference? What additional visualizations would be helpful? How are the stories coming together? 
+<br>
+No additional data is needed, as we will be working with the National Survey of Children’s Health dataset across multiple years.
+
+However, we still need data cleaning and wrangling. We need to handle different types of missing or non-substantive responses. For example, values such as 6, 7, 95, and 99 can represent “don’t know,” or “refused,”, and should be excluded from the analysis depending on the variable. We also need to ensure consistency across years, since some variables can have different names, formats, or coding schemes.
+
+The next step in the analysis will involve statistical modeling and variable selection. We plan to use methods such as ANOVA and Lasso regression to identify the most relevant predictors of grades.
+
+In terms of visualization, additional plots such as boxplots and regression plots would be helpful to further explore relationships between key variables and correlations. 
+
+From our initial exploration, we are already observing some patterns. There appears to be a relationship between children’s health conditions and their grades, as well as between food insecurity and both grades and health conditions.
 
 \
 
@@ -204,4 +244,4 @@ Both: Connections to sustainability and figuring out Github.
 
 Naomi: Created visualizations surrounding research question 1.
 
-Gabi: Loading the data in a reproducible way considering access restrictions and size constraints using gitignore. Created a data folder with the downloaded data and codebooks.
+Gabi: Loading the data in a reproducible way considering access restrictions and size constraints using gitignore. Created a data folder with the downloaded data and codebooks. GGpairs visualization.
