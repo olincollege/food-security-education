@@ -15,19 +15,19 @@ allfactors_23_24 <- df_23_24 |>
   select(grades6to11_2324,grades12to17_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324, HousingInstab_2324, famstruct5_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324)
 
 df_23_24_clean <- allfactors_23_24 %>%
-  filter(MedCare_2324 %in% c(1,2)) %>%
-  filter(MentHCare_2324 %in% c(1,2,3)) %>%
-  filter(SpEducPln_2324 %in% c(1,2)) %>%
-  filter(ReptGrade_2324 %in% c(1,2)) %>%
-  filter(HousingInstab_2324 %in% c(1,2)) %>%
-  filter(povlev4_2324 %in% c(1, 2, 3, 4)) %>%
-  filter(age5_2324 %in% c(1, 2, 3, 4, 5)) %>%
-  filter(sex_2324 %in% c(1, 2)) %>%
-  filter(famstruct5_2324 %in% c(1, 2, 3, 4)) %>%
-  filter(FoodSit_2324 %in% c(1, 2, 3, 4)) %>%
-  filter(FoodCash_2324 %in% c(1, 2, 3)) %>%
-  filter(ChHlthSt_2324 %in% c(1, 2, 3),
-        LowBWght_2324 %in% c(1,2),
+  filter(MedCare_2324 %in% c(1,2), 
+         MentHCare_2324 %in% c(1,2,3), 
+         SpEducPln_2324 %in% c(1,2), 
+         ReptGrade_2324 %in% c(1,2), 
+         HousingInstab_2324 %in% c(1,2), 
+         povlev4_2324 %in% c(1, 2, 3, 4), 
+         age5_2324 %in% c(1, 2, 3, 4, 5), 
+         sex_2324 %in% c(1, 2), 
+         famstruct5_2324 %in% c(1, 2, 3, 4), 
+         FoodSit_2324 %in% c(1, 2, 3, 4), 
+         FoodCash_2324 %in% c(1, 2, 3), 
+         ChHlthSt_2324 %in% c(1, 2, 3), 
+         LowBWght_2324 %in% c(1,2),
         #BMI4_2324 %in% c(1, 2, 3, 4),
         PhysAct_2324 %in% c(1, 2, 3, 4),
         Cond2more_2324 %in% c(1, 2, 3),
