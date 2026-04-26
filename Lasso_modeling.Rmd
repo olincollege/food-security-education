@@ -3,42 +3,38 @@ title: "Lasso_modeling"
 output: html_document
 date: "2026-04-24"
 ---
+### Source: https://www.statology.org/lasso-regression-in-r/
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Lasso regression uses the glmnet package
-
-## Load the data
+## Libraries
 ```{r}
 library(readr)
 library(dplyr)
+library(glmnet)
+```
 
+# Load Data
+```{r}
 df_23_24 <- read_csv("data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
-df_21_22 <- read_csv("data/raw/2021-2022 NSCH_Topical_DRC_CAHMI_v3.csv")
-df_20 <- read_csv("data/raw/NSCH_2020e_Topical_CAHMI_DRCv3.csv")
-df_18_19 <- read_csv("data/raw/NSCH_2018e_2019e_Topical_CAHMI_DRCv3.csv")
 
-#had to remove race7_2324
 allfactors_23_24 <- df_23_24 |> 
-  select(grades6to11_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324) |>
-  filter(grades6to11_2324 %in% c(1,2,3,4))
+  select(grades6to11_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324, HousingInstab_2324, famstruct5_2324)
 
-allfactors_21_22 <- df_21_22 |> 
-  select(SchlEngage_2122, ChHlthSt_2122, LowBWght_2122, PhysAct_2122, Cond2more_2122, CSHCN_2122, ADHDind_2122, ADHDSevInd_2122, ASDSevInd_2122, bullied_2122, bully_2122, MakeFriend_2122, MEDB10ScrQ5_2122, MedCare_2122, MentHCare_2122, SpEducPln_2122, ReptGrade_2122, povlev4_2122, race7_2122, age5_2122, sex_2122, FoodSit_2122, FoodCash_2122)
-
-allfactors_20 <- df_20 |> 
-  select(SchlEngage_20, ChHlthSt_20, LowBWght_20, PhysAct_20, Cond2more_20, CSHCN_20, ADHDind_20, ADHDSevInd_20, ASDSevInd_20, bullied_20, bully_20, MakeFriend_20, MEDB10ScrQ5_20, MedCare_20, MentHCare_20, SpEducPln_20, ReptGrade_20, povlev4_20, race7_20, age5_20, sex_20, FoodSit_20, FoodCash_20)
-
-#no medcare variable in this dataset
-allfactors_18_19 <- df_18_19 |> 
-  select(SchlEngage_1819, ChHlthSt_1819, LowBWght_1819, PhysAct_1819, Cond2more_1819, CSHCN_1819, ADHDind_1819, ADHDSevInd_1819, ASDSevInd_1819, bullied_1819, bully_1819, MakeFriend_1819, MEDB10ScrQ5_1819, MentHCare_1819, SpEducPln_1819, ReptGrade_1819, povlev4_1819, race7_1819, age5_1819, sex_1819, FoodSit_1819, FoodCash_1819)
-
-df_23_24 <- df_23_24[complete.cases(df_23_24), ]
-df_21_22 <- df_21_22[complete.cases(df_21_22), ]
-df_20 <- df_20[complete.cases(df_20), ]
-df_18_19 <- df_18_19[complete.cases(df_18_19), ]
+df_23_24_clean <- allfactors_23_24 %>%
+  filter(MedCare_2324 %in% c(1,2)) %>%
+  filter(MentHCare_2324 %in% c(1,2,3)) %>%
+  filter(SpEducPln_2324 %in% c(1,2)) %>%
+  filter(ReptGrade_2324 %in% c(1,2)) %>%
+  filter(HousingInstab_2324 %in% c(1,2)) %>%
+  filter(povlev4_2324 %in% c(1, 2, 3, 4)) %>%
+  filter(age5_2324 %in% c(1, 2, 3, 4, 5)) %>%
+  filter(sex_2324 %in% c(1, 2)) %>%
+  filter(famstruct5_2324 %in% c(1, 2, 3, 4)) %>%
+  filter(FoodSit_2324 %in% c(1, 2, 3, 4)) %>%
+  filter(FoodCash_2324 %in% c(1, 2, 3))
 ```
 
 # Establish variables
@@ -54,8 +50,67 @@ x <- data.matrix(allfactors_23_24[, c('ChHlthSt_2324', 'LowBWght_2324', 'PhysAct
 #Create the model
 
 ```{r}
-library(glmnet)
+# find the least squares regression with variable "lamda"
 
-#
+lasso_model <- cv.glmnet(x, y, alpha = 1)
+
+#find optimal lambda value that minimizes test MSE
+best_lambda <- lasso_model$lambda.min
+best_lambda
+```
+
+#Model Coefficients
+### Lasso Regression has the potential to remove predictors by shrinking the coefficient down to 0.
+```{r}
+bestlasso_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(bestlasso_model)
+```
+### Coefficients with "." have their coefficients dropped to 0 as they are not influential enough. This is contradictory to what we have discovered with other data exploration such as ggpairs.
+
+
+# Making a prediction: what are the likely grades for a child with the characteristics inputted to the variables?
+```{r}
+#define predictor variables first!
+
+ChHlthSt <-  
+LowBWght <- 
+PhysAct <- 
+Cond2more <-
+CSHCN <-
+ADHDind <- 
+ADHDSevInd<- 
+ASDSevInd <- 
+bullied <-
+bully <-
+MakeFriend <-
+MEDB10ScrQ5 <- 
+MedCare <- 
+MentHCare <- 
+SpEducPln <- 
+ReptGrade <-
+povlev4 <-
+age5 <-
+sex <-
+FoodSit <-
+FoodCash <-
+
+#define new observation/child
+predict_child = matrix(c(ChHlthSt, LowBWght, PhysAct, Cond2more, CSHCN, ADHDind, ADHDSevInd, ASDSevInd, bullied, bully, MakeFriend, MEDB10ScrQ5, MedCare, MentHCare, SpEducPln, ReptGrade, povlev4, age5, sex, FoodSit, FoodCash), nrow=1, ncol=21) 
+
+#use lasso regression model to predict response value
+predict(best_model, s = best_lambda, newx = predict_child)
+```
+
+# Calculate R Squared
+```{r}
+y_predicted <- predict(bestlasso_model, s = best_lambda, newx = x)
+
+#find SST and SSE
+sst <- sum((y - mean(y))^2)
+sse <- sum((y_predicted - y)^2)
+
+#find R-Squared
+rsq <- 1 - sse/sst
+rsq
 ```
 
