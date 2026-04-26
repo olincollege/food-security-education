@@ -1,0 +1,59 @@
+---
+title: "| Data Science With an Eye Towards Sustainability    \n| ANOVA"
+author: "Gabrielle Arrache and Naomi Francis"
+output:
+  bookdown::html_document2:
+    split_by: none
+    toc: no
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(ggplot2)
+library(GGally)
+
+full_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + ASDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(full_model)
+
+```
+```{r}
+
+library(car)
+vif(full_model)
+
+library(performance)
+check_collinearity(full_model) #better to interpret than VIF
+
+```
+
+```{r}
+model_no_health <- lm(grades_2324 ~ 1+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324+famstruct5_2324+age5_2324 + sex_2324,data = df_23_24_clean)
+
+anova(model_no_health, full_model)
+```
+
+
+```{r}
+
+model_no_food <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + ASDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+HousingInstab_2324 + famstruct5_2324+age5_2324 + sex_2324, data = df_23_24_clean)
+
+
+anova(model_no_food, full_model)
+
+
+model_just_food <- lm(grades_2324 ~ 1 + FoodCash_2324 + FoodSit_2324, data = df_23_24_clean)
+
+```
+
+
+```{r}
+anova(model_just_food, full_model)
+```
+
