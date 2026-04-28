@@ -18,11 +18,15 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(GGally)
 
-full_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + ASDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+full_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
 
 anova(full_model)
+Anova(full_model, type = 3)
+
 
 ```
+
+
 ```{r}
 
 library(car)
@@ -56,4 +60,35 @@ model_just_food <- lm(grades_2324 ~ 1 + FoodCash_2324 + FoodSit_2324, data = df_
 ```{r}
 anova(model_just_food, full_model)
 ```
+```{r}
+
+model_2 <- lm(grades_2324 ~ 1+ChHlthSt_2324+PhysAct_2324+Cond2more_2324 +
+    ADHDSevInd_2324+bullied_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324+age5_2324 +sex_2324+famstruct5_2324,data = df_23_24_clean)
+
+anova(model_2, full_model)
+summary(full_model)$r.squared
+summary(model_2)$r.squared
+summary(full_model)$adj.r.squared
+summary(model_2)$adj.r.squared
+
+
+```
+
+```{r}
+
+model_no_adhd_sev <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+model_no_adhd_ind <- model_no_adhd_ind <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+
+anova(model_no_adhd_sev, model_no_adhd_ind)
+summary(model_no_adhd_ind)$r.squared
+summary(model_no_adhd_sev)$r.squared
+summary(model_no_adhd_ind)$adj.r.squared
+summary(model_no_adhd_sev)$adj.r.squared
+
+
+
+```
+
 
