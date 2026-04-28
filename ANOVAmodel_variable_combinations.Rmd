@@ -1,0 +1,111 @@
+---
+title: "ANOVAmodel_variable_combinations"
+output: html_document
+date: "2026-04-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# no ChHlthSt_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_ChHlth_model <- lm(grades_2324 ~ 1 
++LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_ChHlth_model)
+
+# R- Squared Value
+summary(no_ChHlth_model)$r.squared 
+summary(no_ChHlth_model)$adj.r.squared
+```
+# no LowBWght_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_LowBWght_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_LowBWght_model)
+
+# R- Squared Value
+summary(no_LowBWght_model)$r.squared 
+summary(no_LowBWght_model)$adj.r.squared 
+```
+# no PhysAct_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_PhysAct_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+LowBWght_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_PhysAct_model)
+
+# R- Squared Value
+summary(no_PhysAct_model)$r.squared 
+summary(no_PhysAct_model)$adj.r.squared 
+```
+# no Cond2more_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_Cond2more_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+LowBWght_2324+PhysAct_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_Cond2more_model)
+
+# R- Squared Value
+summary(no_Cond2more_model)$r.squared 
+summary(no_Cond2more_model)$adj.r.squared 
+```
+
+# no CSHCN_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_CSHCN_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_CSHCN_model)
+
+# R- Squared Value
+summary(no_CSHCN_model)$r.squared 
+summary(no_CSHCN_model)$adj.r.squared 
+```
+
+# no bullied_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_bullied_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_bullied_model)
+
+# R- Squared Value
+summary(no_bullied_model)$r.squared 
+summary(no_bullied_model)$adj.r.squared 
+```
+
+# no bully_2324
+```{r}
+library(ggplot2)
+library(GGally)
+
+no_bully_model <- lm(grades_2324 ~ 1 
++ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(no_bully_model)
+
+# R- Squared Value
+summary(no_bully_model)$r.squared 
+summary(no_bully_model)$adj.r.squared 
+```
