@@ -1,0 +1,104 @@
+---
+title: "single_factor_models"
+output: html_document
+date: "2026-04-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyzing single factor models to determine which models can explain grades most
+
+```{r}
+ChHlthSt_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324, data = df_23_24_clean)
+ChHlthSt_R <- summary(ChHlthSt_model)$r.squared 
+
+LowBWght_model <- lm(grades_2324 ~ 1 +LowBWght_2324, data = df_23_24_clean)
+LowBWght_R <- summary(LowBWght_model)$r.squared 
+
+PhysAct_model <- lm(grades_2324 ~ 1 +PhysAct_2324, data = df_23_24_clean)
+PhysAct_R <- summary(PhysAct_model)$r.squared 
+
+Cond2more_model <- lm(grades_2324 ~ 1 + Cond2more_2324, data = df_23_24_clean)
+Cond2more_R <- summary(Cond2more_model)$r.squared
+
+CSHCN_model <- lm(grades_2324 ~ 1 + CSHCN_2324, data = df_23_24_clean)
+CSHCN_R <- summary(Cond2more_model)$r.squared
+
+ADHDSevInd_model <- lm(grades_2324 ~ 1 + ADHDSevInd_2324, data = df_23_24_clean)
+ADHDSevInd_R <- summary(ADHDSevInd_model)$r.squared
+
+bullied_model <- lm(grades_2324 ~ 1 + bullied_2324, data = df_23_24_clean)
+bullied_R <- summary(bullied_model)$r.squared
+
+bully_model <- lm(grades_2324 ~ 1 + bully_2324, data = df_23_24_clean)
+bully_R <- summary(bully_model)$r.squared
+
+MakeFriend_model <- lm(grades_2324 ~ 1 + MakeFriend_2324, data = df_23_24_clean)
+MakeFriend_R <- summary(MakeFriend_model)$r.squared
+
+MEDB10ScrQ5_model <- lm(grades_2324 ~ 1 + MEDB10ScrQ5_2324, data = df_23_24_clean)
+MEDB10ScrQ5_R <- summary(MEDB10ScrQ5_model)$r.squared
+
+povlev4_model <- lm(grades_2324 ~ 1 + povlev4_2324, data = df_23_24_clean)
+povlev4_R <- summary(povlev4_model)$r.squared
+
+FoodSit_model <- lm(grades_2324 ~ 1 + FoodSit_2324, data = df_23_24_clean)
+FoodSit_R <- summary(FoodSit_model)$r.squared
+
+HousingInstab_model <- lm(grades_2324 ~ 1 + HousingInstab_2324, data = df_23_24_clean)
+HousingInstab_R <- summary(HousingInstab_model)$r.squared
+
+famstruct5_model <- lm(grades_2324 ~ 1 + famstruct5_2324, data = df_23_24_clean)
+famstruct5_R <- summary(famstruct5_model)$r.squared
+
+age5_model <- lm(grades_2324 ~ 1 + age5_2324, data = df_23_24_clean)
+age5_R <- summary(age5_model)$r.squared
+
+sex_model <- lm(grades_2324 ~ 1 + sex_2324, data = df_23_24_clean)
+sex_R <- summary(sex_model)$r.squared
+
+MedCare_model <- lm(grades_2324 ~ 1 + MedCare_2324, data = df_23_24_clean)
+MedCare_R <- summary(MedCare_model)$r.squared
+
+MentHCare_model <- lm(grades_2324 ~ 1 + MentHCare_2324, data = df_23_24_clean)
+MentHCare_R <- summary(MentHCare_model)$r.squared
+
+SpEducPln_model <- lm(grades_2324 ~ 1 + SpEducPln_2324, data = df_23_24_clean)
+SpEducPln_R <- summary(SpEducPln_model)$r.squared
+
+ReptGrade_model <- lm(grades_2324 ~ 1 + ReptGrade_2324, data = df_23_24_clean)
+ReptGrade_R <- summary(ReptGrade_model)$r.squared
+
+```
+
+## Combine into 1 dataframe
+```{r}
+library(tidyr)
+
+all_r_squared <- data.frame(ChHlthSt_R, LowBWght_R, PhysAct_R, Cond2more_R, CSHCN_R, ADHDSevInd_R, bullied_R, bully_R, MakeFriend_R, MEDB10ScrQ5_R, povlev4_R, FoodSit_R, HousingInstab_R, famstruct5_R, age5_R, sex_R, MedCare_R, MentHCare_R, SpEducPln_R, ReptGrade_R)
+
+all_r_squared <- all_r_squared |>
+  pivot_longer(cols = 1:20, names_to ="factor", values_to = "R squared")
+
+```
+
+After ordering factors by R squared value, the most influential ones are 
+1) Mental, emotional, developmental, or behavioral problems(MEDB10ScrQ5) 
+2) ADHD Severity Index (ADHDSevInd) 
+3) Special Education Plan Status (SpEducPln) 
+4) Health Conditions (Cond2more) 
+5) Special Health Care Needs (CSHCN)
+6) Difficulty making/keeping friends (MakeFriend)
+7) Food Situation (FoodSit)
+8) Poverty Level (povlev4)
+
+Making a model with these 8 most influential variables:
+```{r}
+top_eight_model <- lm(grades_2324 ~ 1 + MEDB10ScrQ5_2324 + ADHDSevInd_2324 + SpEducPln_2324 + Cond2more_2324 + CSHCN_2324 + MakeFriend_2324 + FoodSit_2324 + povlev4_2324, data = df_23_24_clean)
+
+summary(top_eight_model)$r.squared
+```
+
+
