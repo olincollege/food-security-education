@@ -18,11 +18,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(GGally)
 
-<<<<<<< HEAD
 full_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
-=======
-full_model <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + +bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
->>>>>>> 9e38e6504c9cf7756c4c80fc79dc389b6cf089e2
+
+anova(full_model)
+Anova(full_model, type = 3)
+
+
 
 anova(full_model)
 Anova(full_model, type = 3)
@@ -45,6 +46,9 @@ check_collinearity(full_model) #better to interpret than VIF
 model_no_health <- lm(grades_2324 ~ 1+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324+famstruct5_2324+age5_2324 + sex_2324,data = df_23_24_clean)
 
 anova(model_no_health, full_model)
+
+summary(model_no_health)$r.squared
+summary(model_no_health)$adj.r.squared
 ```
 
 
@@ -53,17 +57,18 @@ anova(model_no_health, full_model)
 model_no_food <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324 + ASDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+HousingInstab_2324 + famstruct5_2324+age5_2324 + sex_2324, data = df_23_24_clean)
 
 
-anova(model_no_food, full_model)
-
-
 model_just_food <- lm(grades_2324 ~ 1 + FoodCash_2324 + FoodSit_2324, data = df_23_24_clean)
 
+
+anova(model_just_food, model_no_food)
+summary(model_just_food)$r.squared
+summary(model_just_food)$adj.r.squared
+summary(model_no_food)$r.squared
+summary(model_no_food)$adj.r.squared
+
 ```
 
 
-```{r}
-anova(model_just_food, full_model)
-```
 ```{r}
 
 model_2 <- lm(grades_2324 ~ 1+ChHlthSt_2324+PhysAct_2324+Cond2more_2324 +
@@ -71,8 +76,8 @@ model_2 <- lm(grades_2324 ~ 1+ChHlthSt_2324+PhysAct_2324+Cond2more_2324 +
 
 anova(model_2, full_model)
 summary(full_model)$r.squared
-summary(model_2)$r.squared
 summary(full_model)$adj.r.squared
+summary(model_2)$r.squared
 summary(model_2)$adj.r.squared
 
 
@@ -87,12 +92,60 @@ model_no_adhd_ind <- model_no_adhd_ind <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowB
 
 anova(model_no_adhd_sev, model_no_adhd_ind)
 summary(model_no_adhd_ind)$r.squared
-summary(model_no_adhd_sev)$r.squared
 summary(model_no_adhd_ind)$adj.r.squared
+summary(model_no_adhd_sev)$r.squared
 summary(model_no_adhd_sev)$adj.r.squared
 
 
 
 ```
+```{r}
 
+model_3 <- lm(grades_2324 ~ 1 +ChHlthSt_2324+PhysAct_2324+ADHDind_2324+bullied_2324+bully_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+age5_2324+sex_2324+MedCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+anova(model_3, full_model)
+
+summary(model_3)$r.squared
+summary(model_3)$adj.r.squared
+
+
+```
+
+```{r}
+model_4 <- lm(grades_2324~ 1+ povlev4_2324+ADHDind_2324+FoodSit_2324+bullied_2324+, data = df_23_24_clean)
+
+anova(model_4, full_model)
+
+summary(model_4)$r.squared
+summary(model_4)$adj.r.squared
+
+```
+```{r}
+full_model_no_age <- lm(grades_2324 ~ 1 +ChHlthSt_2324+LowBWght_2324+PhysAct_2324+Cond2more_2324+CSHCN_2324+ADHDind_2324+ADHDSevInd_2324+bullied_2324+bully_2324+MakeFriend_2324+MEDB10ScrQ5_2324+povlev4_2324+FoodSit_2324+FoodCash_2324+HousingInstab_2324 + famstruct5_2324+sex_2324+MedCare_2324+MentHCare_2324+SpEducPln_2324+ReptGrade_2324, data = df_23_24_clean)
+
+
+anova(full_model_no_age, full_model)
+
+summary(full_model_no_age)$r.squared
+summary(full_model_no_age)$adj.r.squared
+
+```
+```{r}
+model_5 <- lm(grades_2324 ~ 1 + FoodSit_2324 + ADHDind_2324 +  povlev4_2324+bullied_2324+ bully_2324,data=df_23_24_clean)
+
+
+Anova(model_5)
+
+summary(model_5 )$r.squared
+summary(model_5 )$adj.r.squared
+
+```
+
+```{r}
+
+
+
+
+
+```
 
