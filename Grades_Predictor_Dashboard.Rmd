@@ -1,0 +1,76 @@
+---
+title: "Grades_Predictor_Dashboard"
+output: html_document
+date: "2026-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Static image to show top 20 predictors -- use renderImage("Top_20_Predictors") (image in food-security-education folder)
+
+## input model parameter, output grade expectation
+```{r}
+# for now trying with special education plan, family structure, poverty level, physical activity, food cash, sex, and age
+
+ui <- fluidPage(
+  numericInput("SpEducPln", "Special Education Plan, 1 = yes, 2 = no:", 1, min = 1, max = 2),
+  numericInput("famstruct", "Family Structure, 1 = Two parents, currently married, 2 = Two parents, currently not married, 3 = Single parent (mother or father), 4 = Grandparent Household, 5 = Other family type" , 1, min = 1, max = 5),
+  numericInput("povlev", "Poverty Level, 1 = 0-99% of poverty level, 2 = 100-199% poverty level, 3 = 200-399% poverty level, 4 = 400% or more of poverty level" , 1, min = 1, max = 4),
+  numericInput("PhysAct", "Physical Activity, 1 = Active 60 minutes per day, 2 = Not active 60 minutes per day" , 1, min = 1, max = 2),
+  numericInput("FoodCash", "Food Cash, 1 = None, 2 = One or Two Types, 3 = Three to five types" , 1, min = 1, max = 3),
+  numericInput("age", "age, 1 = 0-3, 2 = 4-7, 3 = 8-11, 4 = 12-14, 5 = 15-17" , 1, min = 1, max = 5),
+  numericInput("sex", "sex, 1 = Male, 2 = Female" , 1, min = 1, max = 2),
+  
+  verbatimTextOutput("prediction")
+)
+
+server <- function(input, output, session) {
+  
+  input_data <- reactive({
+    data.frame(
+      SpEducPln_2324 = input$SpEducPln, 
+      famstruct5_2324 = input$famstruct, 
+      povlev4_2324 = input$povlev, 
+      PhysAct_2324 = input$PhysAct, 
+      FoodCash_2324 = input$FoodCash,
+      sex_2324 = input$sex,
+      age5_2324 = input$age,
+      
+      # default for other values, purely guesses
+      
+      ChHlthSt_2324 = 1, # fair or poor
+      LowBWght_2324 = 2, # no
+      Cond2more_2324 = 1, # does not have a condition
+      CSHCN_2324 = 4, # four or five screener criteria
+      ADHDind_2324 = 1, # does not have condition
+      ADHDSevInd_2324 = 1, # does not have condition
+      bullied_2324 = 1, # never been bullied in past 12 months
+      bully_2324 = 1, # never bully others in past 12 months
+      MakeFriend_2324 = 1, # no difficulty
+      MEDB10ScrQ5_2324 = 1, # do not have condition
+      MedCare_2324 = 1, #yes
+      MentHCare_2324 = 3, # no need
+      ReptGrade_2324 = 2, # no
+      FoodSit_2324 = 1, # always get enough nutritious food
+      HousingInstab_2324 = 2, # did not experience housing insecurity
+      ASDSevInd_2324 = 1, # does not currently have asd
+      
+      case_wt = 1
+    )
+  })
+  
+  baked_input <- reactive({
+  fitted_final %>% 
+    extract_recipe() %>% 
+    bake(new_data = input_data())
+  })
+
+  output$prediction <- renderText({
+    pred <- predict(fitted_final, new_data = baked_input())
+    paste("Predicted grade category:", pred$.pred_class)
+  })
+}
+shinyApp(ui, server)
+```
