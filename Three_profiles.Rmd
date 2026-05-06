@@ -1,0 +1,86 @@
+---
+title: "Three_profiles"
+output: html_document
+date: "2026-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Profile 1
+### 10 year old female with rated moderate autism. This may represent a student who is on the autism spectrum and has some behavior problems, but has the resources and family support to help with school. On a special education plan, married parents, not living in poverty, physically active, not food insecure, very good health, low birth weight, currently has condition(cond2more), four or five screener criteria, does not have adhd, bullied 1 or 2 times per month, does not bully others, a lot of difficulty making friends, has gotten a physical checkup in the past year, has not recieved mental health care, has not repeated a grade, always gets enough nutritious food, did not experience housing instability, 
+
+```{r}
+#building the profile
+profile_1 <- data.frame(
+      SpEducPln_2324 = 1, # on a special ed plan
+      famstruct5_2324 = 1,  # married parents
+      povlev4_2324 = 4, # over 400% poverty
+      PhysAct_2324 = 1, # gets 60 mins a day
+      FoodCash_2324 = 1, # does not recieve food cash
+      sex_2324 = 2, # female
+      age5_2324 = 3, # 8-11 yrs old
+      ChHlthSt_2324 = 1, # excellent or very good
+      LowBWght_2324 = 1, # yes
+      Cond2more_2324 = 3, # currently has condition
+      CSHCN_2324 = 4, # four or five screener criteria
+      ADHDind_2324 = 1, # does not have condition
+      ADHDSevInd_2324 = 1, # does not have condition
+      bullied_2324 = 3, # bullied once or twice a month
+      bully_2324 = 1, # never bully others in past 12 months
+      MakeFriend_2324 = 3, # a lot of difficulty
+      MEDB10ScrQ5_2324 = 3, # currently has condition
+      MedCare_2324 = 1, #yes
+      MentHCare_2324 = 3, # no need
+      ReptGrade_2324 = 2, # no
+      FoodSit_2324 = 1, # always get enough nutritious food
+      HousingInstab_2324 = 2, # did not experience housing insecurity
+      ASDSevInd_2324 = 3, # ASD rated moderate or severe
+      case_wt = 1)
+```
+
+## predicting the profile 1 grades using the logistic model `fitted_final`
+```{r}
+profile_1_pred <-  predict(fitted_final, new_data = profile_1)
+profile_1_pred
+```
+### Profile 1 is predicted to have good grades.
+
+## Profile 2
+### A 16 year old male with mild ADHD who has a single parent with low income, and lives with 2 other siblings. This represents a student who is food insecure. The student bullies others occasionally (once or twice a month). He did experence housing instability
+```{r}
+#building the profile
+profile_2 <- data.frame(
+      SpEducPln_2324 = 2, # not on a special ed plan
+      famstruct5_2324 = 3,  # single parent
+      povlev4_2324 = 2, # 100 - 199 percent poverty level
+      PhysAct_2324 = 2, # doesn't get 60 mins a day
+      FoodCash_2324 = 2, # one or two types
+      sex_2324 = 1, # male
+      age5_2324 = 5, # 15-17 yrs old
+      ChHlthSt_2324 = 2, # good
+      LowBWght_2324 = 2, # no
+      Cond2more_2324 = 1, # does not have condition
+      CSHCN_2324 = 1, # one condition
+      ADHDind_2324 = 3, # currently has condition
+      ADHDSevInd_2324 = 2, # current condition, rated mild
+      bullied_2324 = 1, # never been bullied in past 12 months
+      bully_2324 = 3, # bullies other once or twice a month
+      MakeFriend_2324 = 1, # no difficulty
+      MEDB10ScrQ5_2324 = 3, # currently has condition
+      MedCare_2324 = 2, # none in past year
+      MentHCare_2324 = 3, # no need
+      ReptGrade_2324 = 2, # no
+      FoodSit_2324 = 3, # sometimes not enough food
+      HousingInstab_2324 = 1, # did  experience housing insecurity
+      ASDSevInd_2324 = 1, # does not have ASD
+      case_wt = 1)
+```
+
+## predicting the profile 2 grades using the logistic model `fitted_final`
+```{r}
+profile_2_pred <-  predict(fitted_final, new_data = profile_1)
+profile_2_pred
+```
+### Profile 2 is predicted to have good grades.
