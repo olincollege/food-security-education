@@ -1,50 +1,44 @@
 ---
-title: "Logistic Regression Model: Grade Outcomes"
+title: "Logistic Regression: Grade Outcomes"
 author: "Gabrielle Arrache and Naomi Francis"
 output: html_document
-date: "`r Sys.Date()`"
 ---
 
 # Setup
-
 ```{r setup, message=FALSE, warning=FALSE}
-library(tidymodels)  # modelling framework (recipes, workflows, tuning, metrics)
-library(glmnet)      # engine that fits the logistic regression with regularisation
-library(vip)         # variable importance plots
-library(broom)       # tidy() to extract model coefficients as a data frame
+library(tidymodels)
+library(glmnet)
+library(vip)
+library(broom)
 ```
 
 ---
 
-# Step 1: Prepare the Data
+# Data Preparation
 
 ```{r}
-#run clean_data.Rmd first
-# Convert the outcome to a factor
-
+# See if clean_data.Rmd has been executed
+df_23_24_clean <- read.csv("df_23_24_clean.csv")
 df_model <- df_23_24_clean |>
-
-# The order of the levels matters here, since “Excellent” will be used as the reference category.
   mutate(grades_2324 = factor(
     grades_2324, 
     levels = c(1, 2, 3, 4),
     labels = c("Excellent", "Good", "Fair", "Poor")
-  )) |>
-  na.omit()
-# Print the class distribution so we can see the imbalance
-cat("Grade distribution:\n")
+  ))
+
+
+cat("Grade distribution (%):\n")
 round(prop.table(table(df_model$grades_2324)) * 100, 1)
 ```
 
 ---
 
-# Step 2: Train / Test Split
+# Data Splitting
 
 ```{r split}
 set.seed(21)  
 
-# Split 70% train / 30% test 
-# strata = grades_2324 keeps the same class proportions in both halves, which is important because "Fair" and "Poor" are rare.
+
 split <- initial_split(df_model, prop = 0.70, strata = grades_2324)
 train <- training(split)   
 test  <- testing(split) 
@@ -55,61 +49,35 @@ nrow(test)
 
 ---
 
-# Step 3: Compute Class Weights
+# Class Imbalance Handling
 
-To fix class imbalance, we are using **class weights**. Rare classes get a
-higher weight so the model is penalised more for missing them.
-
-The formula is: `weight = total_rows / count_of_that_class`
-This makes the effective contribution of each class equal during training.
+Because the lower-grade classes are less common, we used class weights so the model gives them more attention during training.
 
 ```{r class-weights}
-# Total number of training rows
 n_total <- nrow(train)
-
-# Count how many rows belong to each grade class
 class_counts <- table(train$grades_2324)
 
-# Compute the weight for each class
-# weight = total / count  -->  rare classes get higher weights
+# Calculate weights per class
 weights_lookup <- n_total / class_counts
 print(round(weights_lookup, 2))
 
-# Add the weight as a new column in the training data.
-# importance_weights() is the tidymodels way to tell the model
-# "pay more attention to rows with higher weights".
 train_w <- train |>
-  mutate(
-    case_wt = importance_weights(
-      as.numeric(weights_lookup[as.character(grades_2324)])
-    )
-  )
+  mutate( case_wt = importance_weights(as.numeric(weights_lookup[as.character(grades_2324)])))
 ```
 
 ---
 
-# Step 4: Set Up the Recipe and Model
 
 ```{r recipe-and-model}
-# recipe() defines how to prepare the data before fitting.
-# grades_2324 is the outcome; all other columns are predictors.
 recipe_lr <- recipe(grades_2324 ~ ., data = train_w) |>
-
-  # Normalise all numeric predictors to mean = 0 and sd = 1.
-  # Required because the Ridge penalty treats all variables equally. Without normalisation, variables on larger scales get unfairly penalised.
   step_normalize(all_numeric_predictors())
 
-# Define the logistic regression model.
-# penalty = tune() means we will search for the best regularisation strength.
-# mixture = 0 means Ridge (L2) 
+
 lr_spec <- multinom_reg(
   penalty = tune(),
-  mixture = 0
-) |>
+  mixture = 0) |>
   set_engine("glmnet")
 
-# Bundle the recipe, model, and class weights into a single workflow.
-# add_case_weights() tells the workflow to use the case_wt column as weights. It will NOT be used as a predictor.
 lr_wf <- workflow() |>
   add_recipe(recipe_lr) |>
   add_model(lr_spec) |>
@@ -118,89 +86,70 @@ lr_wf <- workflow() |>
 
 ---
 
-# Step 5: Tune the Penalty with Cross-Validation
+# Tuning
+
+We optimize the penalty parameter using 5-fold cross-validation, with macro recall as our primary metric.
 
 ```{r tune, message=FALSE, warning=FALSE}
-# strata ensures each fold has the same class proportions as the full training set.
 cv_folds <- vfold_cv(train_w, v = 5, strata = grades_2324)
 
-# Create a random search grid of 20 penalty values
-# Values are spread on a log scale (small to large regularisation strength).
 set.seed(21)
 penalty_grid <- grid_random(penalty(), size = 20)
 
-# Run 5-fold CV for every penalty value.
-# macro recall averages recall across all four grade classes equally.
 set.seed(21)
 lr_tune <- tune_grid(
   lr_wf,
   resamples = cv_folds,
   grid      = penalty_grid,
-  metrics   = metric_set(recall)
-)
+  metrics   = metric_set(recall))
 
 show_best(lr_tune, metric = "recall", n = 5)
 ```
 
 ```{r tune-plot, fig.height=4, fig.width=6}
-# Plot recall vs penalty to see how the model performs across the search space
 autoplot(lr_tune) +
   labs(
     title    = "Tuning Curve: Macro Recall vs Penalty",
-    subtitle = "Each point = average across 5 CV folds"
+    subtitle = "Averaged across 5-fold CV"
   )
 ```
 
 ---
 
-# Step 6: Final Model
+# Fit
 
 ```{r final-fit, message=FALSE, warning=FALSE}
-# Pick the penalty value that gave the highest macro recall across the CV folds
 best_penalty <- select_best(lr_tune, metric = "recall")
-cat("Best penalty:", round(best_penalty$penalty, 5), "\n")
+cat("Optimal penalty:", round(best_penalty$penalty, 5), "\n")
 
-# Swap tune() for the actual best penalty value
 final_wf <- lr_wf |> finalize_workflow(best_penalty)
 
-# last_fit() trains on the FULL training set and evaluates once on the test set.
-# This is the only time we use test data
 final_fit <- last_fit(
   final_wf,
   split   = split,
-  metrics = metric_set(accuracy, recall)
-)
-
+  metrics = metric_set(accuracy, recall))
 ```
 
 ---
 
-# Step 7: Confusion Matrix
+# Model Evaluation
 
 ```{r conf-mat, fig.height=5, fig.width=6}
-# last_fit() doesn't save predictions when case weights are used,
-# so we manually fit on the full training set and predict on the test set.
+# Manual fit to extract predictions (handling case weight limitations in last_fit)
 fitted_final <- final_wf |> fit(data = train_w)
 
-# predict() returns the predicted class for each row in the test set.
-# We bind the true labels alongside so we can compare them.
 preds <- predict(fitted_final, new_data = test) |>
   bind_cols(test |> select(grades_2324))
 
-# Build the confusion matrix
 cm <- conf_mat(preds, truth = grades_2324, estimate = .pred_class)
 
-# Heatmap: dark = many predictions, light = few.
-# Ideally the diagonal (correct predictions) should be the darkest cell in each row.
 autoplot(cm, type = "heatmap") +
   labs(
-    title    = "Confusion Matrix: Logistic Regression",
-    subtitle = "Test set | Class-weighted training | Macro recall"
-  )
+    title    = "Confusion Matrix",
+    subtitle = "Test set performance (Class-weighted)")
 ```
 
 ```{r class-report}
-# Per-class precision, recall, and F1
 cm |>
   summary() |>
   filter(.metric %in% c("sensitivity", "precision", "f_meas")) |>
@@ -210,27 +159,19 @@ cm |>
 
 ---
 
-# Step 8: Feature Importance
-
-Which variables did the model rely on most? We extract importance scores (mean absolute
-coefficient across the four outcome classes).
+# Variable Importance
 
 ```{r vip-plot, fig.height=6, fig.width=7, message=FALSE, warning=FALSE}
-# vi() extracts a tidy table of variable importance scores.
-# For glmnet, importance = mean absolute coefficient value across outcome classes.
-# fitted_final is the class-weighted model trained on the full training set.
 vip_data <- fitted_final |>
   extract_fit_parsnip() |>
   vi() |>
-  # Keep only the top 20 most important variables to avoid a cluttered plot
   slice_max(Importance, n = 20)
 
-# Plot importance scores as a horizontal bar chart
 ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
   geom_col() +
   labs(
-    title    = "Top 20 Predictors -- Logistic Regression (Class Weights)",
-    subtitle = "Importance = mean absolute coefficient across outcome classes",
+    title    = "Top 20 Predictors",
+    subtitle = "Based on Ridge regression importance scores",
     x = "Importance", y = NULL, fill = NULL
   ) +
   theme(legend.position = "bottom")
@@ -238,14 +179,11 @@ ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
 
 ---
 
-# Step 9: Conclusion
+# Findings
 
-## Model performance summary
+## Performance
 
 ```{r summary-table}
-# Compute accuracy and macro recall directly from the test-set predictions.
-# We use preds (manual predictions) because last_fit() does not save predictions
-# when case weights are present in the workflow.
 preds |>
   summarise(
     accuracy = mean(.pred_class == grades_2324),
@@ -255,109 +193,65 @@ preds |>
   mutate(across(everything(), \(x) round(x, 3)))
 ```
 
-## Key findings
+---
 
-**Food security is a meaningful predictor of grades.** Both `FoodSit_2324` and `FoodCash_2324`
-appear in the top predictors after controlling for age, sex, poverty level, and family structure.
-Children in households that struggle with food access are more likely to receive fair or poor grades.
+# Inferential Analysis: Odds Ratios
 
-**Other factors also matter.** ADHD severity (`ADHDSevInd_2324`), special education plans
-(`SpEducPln_2324`), and social factors like bullying and ability to make friends are among the
-stronger predictors. Grades are shaped by a combination of food access, health, and social
-circumstances.
+To better understand how much these variables effects grades, we use an unregularized logistic regression with a binary outcome (At Risk vs. Not At Risk) to calculate Odds Ratios.
 
-**Model limitations.** A macro recall of 46% means the model correctly identifies roughly 4-5
-out of every 10 at-risk children, better than a model that ignores minority classes entirely,
-but not reliable enough to use as a standalone screening tool. These are associations from
-cross-sectional survey data. We cannot claim food insecurity *causes* worse grades.
-
-
-
-# Step 10: Inferential Analysis: How Much More Likely?
-
-The predictive model tells us *that* food security matters. This section tells us *by how much*,
-using a standard (unregularised) logistic regression to produce **odds ratios** with confidence
-intervals and p-values.
-
-The predictive model uses Ridge regularisation, which deliberately shrinks coefficients to
-improve prediction. Those shrunken coefficients cannot be interpreted as valid estimates of
-effect size. An inferential model is designed purely to estimate relationships accurately.
-
-## Create a binary outcome
+## Binary Outcome
 
 ```{r binary-outcome}
 df_infer <- df_model |>
   mutate(
-    # Create a binary outcome: at_risk = Fair or Poor; not_at_risk = Excellent or Good
     at_risk = factor(
       ifelse(grades_2324 %in% c("Fair", "Poor"), "at_risk", "not_at_risk"),
-      levels = c("not_at_risk", "at_risk")  # "not_at_risk" is the reference category
+      levels = c("not_at_risk", "at_risk")
     )
   )
 
-# Check the binary split
 df_infer |>
   count(at_risk) |>
   mutate(pct = round(n / sum(n) * 100, 1))
 ```
 
-## Fit the inferential logistic regression
+## Model Estimation
 
-Food security variables are the **focal predictors**. All other variables are **controls**
-included only to prevent confounding.
-
-Note: we use `ADHDSevInd_2324` rather than `ADHDind_2324` because the two are nearly perfectly
-correlated (r = 0.94). `ADHDSevInd` is preferred as it contains severity information in addition
-to presence/absence -- including both would cause multicollinearity.
+We focus on food security variables while controlling for age, sex, poverty, family structure, and ADHD severity.
 
 ```{r infer-glm}
-# glm() fits a standard logistic regression with no regularisation.
-# family = binomial tells R the outcome is binary (at_risk vs not_at_risk).
 infer_fit <- glm(
-  at_risk ~ FoodSit_2324 + FoodCash_2324 +                           # food security (focal)
-            age5_2324 + sex_2324 + povlev4_2324 + famstruct5_2324 +  # demographic controls
-            ADHDSevInd_2324,                                          # ADHD control
+  at_risk ~ FoodSit_2324 + FoodCash_2324 +                           
+            age5_2324 + sex_2324 + povlev4_2324 + famstruct5_2324 +  
+            ADHDSevInd_2324,                                          
   data   = df_infer,
-  family = binomial
-)
+  family = binomial)
 
 summary(infer_fit)
 ```
 
-## Extract odds ratios
+## Results
 
 ```{r odds-ratios}
-# exponentiate = TRUE converts log-odds to odds ratios (easier to interpret).
-# conf.int = TRUE adds 95% confidence intervals.
 odds_ratios <- tidy(infer_fit, exponentiate = TRUE, conf.int = TRUE) |>
-
-  # Remove the intercept -- it has no meaningful interpretation here
   filter(term != "(Intercept)") |>
-
-  # Label each variable by its role
   mutate(
     role = case_when(
-      term %in% c("FoodSit_2324", "FoodCash_2324")                            ~ "Food security (focal)",
-      term %in% c("age5_2324", "sex_2324", "povlev4_2324", "famstruct5_2324",
-                  "ADHDSevInd_2324")                                           ~ "Control variable"
+      term %in% c("FoodSit_2324", "FoodCash_2324") ~ "Food security (focal)",
+      TRUE ~ "Control variable"
     ),
-    # Flag statistical significance at the 5% level
     significant = p.value < 0.05
   ) |>
   arrange(desc(estimate))
 
-# Print results table
 odds_ratios |>
   select(term, estimate, conf.low, conf.high, p.value, role) |>
   mutate(across(where(is.numeric), \(x) round(x, 3)))
 ```
 
-## Visualise odds ratios
+## Visualizing Effects
 
 ```{r or-plot, fig.height=4, fig.width=7}
-# Each point is an odds ratio; horizontal lines are 95% confidence intervals.
-# Dashed vertical line at OR = 1 is the "no effect" reference.
-# OR > 1 = higher odds of at-risk grades, OR < 1 = lower odds.
 ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)) +
   geom_point(size = 3) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2) +
@@ -367,33 +261,14 @@ ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)
     "Control variable"      = "#b2b2b2"
   )) +
   labs(
-    title    = "Odds Ratios -- Inferential Logistic Regression",
-    subtitle = "Outcome: Fair/Poor vs Excellent/Good. OR > 1 = higher odds of at-risk grades.",
+    title    = "Effect Estimates (Odds Ratios)",
+    subtitle = "Outcome: Fair/Poor vs Excellent/Good grades",
     x = "Odds Ratio (95% CI)", y = NULL, color = NULL
   ) +
   theme(legend.position = "bottom")
 ```
 
-## Interpretation
-
-**Food security findings:**
-
-- **`FoodSit_2324` (OR around 1.42):** Each step toward worse food access -- from "always enough
-  nutritious food" toward "often not enough" -- is associated with approximately 42% higher odds
-  of at-risk grades, after controlling for age, sex, poverty, family structure, and ADHD severity.
-
-- **`FoodCash_2324` (OR around 1.40):** Children from families relying on more types of food and cash
-  assistance(a marker of greater economic need) have approximately 40% higher odds of at-risk
-  grades. Note: this variable captures *need* for assistance, not a harmful effect of receiving it.
-
-Both results are statistically significant (p < 0.001) with tight confidence intervals.
-
-**How to write this up:**
-
-> *"Each step toward greater food insecurity was associated with 1.42 times higher odds of
-> receiving fair or poor grades, after controlling for age, sex, poverty level, family structure,
-> and ADHD severity (OR = 1.42, 95% CI [1.37, 1.48], p < 0.001)."*
-
-**Important caveat:** These are observational associations, not causal effects. We cannot rule
-out that unmeasured factors, such as neighborhood safety or parental stress, drive both food
-insecurity and lower grades simultaneously.
+## Saving Model
+```{r} 
+saveRDS(fitted_final, "Logist_Regression_model.rds")
+```

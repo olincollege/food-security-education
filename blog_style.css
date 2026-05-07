@@ -1,0 +1,181 @@
+/* ── Typography & base ───────────────────────────────────────── */
+body {
+  font-family: 'Georgia', serif;
+  font-size: 17px;
+  line-height: 1.75;
+  color: #2c2c2c;
+  max-width: 960px;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+h2 {
+  border-bottom: 2px solid #e8e8e8;
+  padding-bottom: 6px;
+  margin-top: 40px;
+}
+
+p {
+  margin-bottom: 1.2em;
+}
+
+blockquote {
+  border-left: 4px solid #2980b9;
+  background: #f4f8fb;
+  padding: 12px 20px;
+  margin: 20px 0;
+  color: #444;
+  font-style: normal;
+  font-size: 0.95em;
+}
+
+/* ── Shiny controls ──────────────────────────────────────────── */
+.well {
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  box-shadow: none;
+}
+
+.shiny-input-container {
+  margin-bottom: 14px;
+}
+
+.control-label {
+  font-size: 0.88em;
+  font-weight: 600;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  color: #444;
+}
+
+/* ── Stat cards ──────────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.stat-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  border-top: 4px solid #2980b9;
+}
+
+.stat-card.orange  { border-top-color: #e67e22; }
+.stat-card.green   { border-top-color: #1a6b45; }
+.stat-card.red     { border-top-color: #c0392b; }
+
+.stat-number {
+  font-size: 2.0em;
+  font-weight: 700;
+  color: #1a1a2e;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.82em;
+  color: #666;
+  margin-top: 6px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ── Factor cards ────────────────────────────────────────────── */
+.factor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.factor-card {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-left: 5px solid #2980b9;
+}
+
+.factor-card.orange { border-left-color: #e67e22; }
+.factor-card.green  { border-left-color: #1a6b45; }
+.factor-card.purple { border-left-color: #8e44ad; }
+
+.factor-title {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+  color: #1a1a2e;
+}
+
+.factor-desc {
+  font-size: 0.85em;
+  color: #555;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Profile cards (for child profiles section) ──────────────── */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.profile-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 22px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  border-top: 4px solid #74c69d;
+}
+
+.profile-name {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.05em;
+  margin-bottom: 8px;
+  color: #1a1a2e;
+}
+
+.profile-detail {
+  font-size: 0.86em;
+  color: #555;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Highlight note box ──────────────────────────────────────── */
+.highlight-note {
+  background: #f4f8fb;
+  border-radius: 6px;
+  padding: 14px 20px;
+  margin: 16px 0;
+  border-left: 4px solid #2980b9;
+  font-size: 0.93em;
+  color: #333;
+}
+
+/* ── Risk / protective factor tags ──────────────────────────── */
+.tag {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 0.77em;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 600;
+  margin: 2px 2px 2px 0;
+  line-height: 1.6;
+}
+
+.tag-risk    { background: #fde8e8; color: #c0392b; }
+.tag-protect { background: #e8f5ee; color: #1a6b45; }
+.tag-neutral { background: #f0f0f0; color: #555555; }

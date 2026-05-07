@@ -1,0 +1,1044 @@
+---
+title: "What Factors Influence School Grades of Children in the U.S.?"
+author: "Gabrielle Arrache and Naomi Francis"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    css: blog_style.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(tidymodels)
+library(shiny)
+library(scales)
+library(readr)
+
+# Load saved model objects
+odds_ratios  <- readRDS("odds_ratios.rds")
+fitted_final <- readRDS("fitted_final.rds")
+vip_data     <- readRDS("vip_data.rds")
+
+# Pull key odds ratios for inline use
+or_foodsit  <- odds_ratios |> filter(term == "FoodSit_2324")  |> pull(estimate) |> round(2)
+or_foodcash <- odds_ratios |> filter(term == "FoodCash_2324") |> pull(estimate) |> round(2)
+
+# Load test-set predictions for model performance visualizations
+test_preds <- readRDS("test_preds.rds")   # .pred_class + grades_2324
+test_probs <- readRDS("test_probs.rds")   # probabilities + grades_2324 already included
+roc_data   <- test_probs                  # already contains truth column
+cm_blog    <- conf_mat(test_preds, truth = grades_2324, estimate = .pred_class)
+
+macro_recall <- recall(
+  test_preds, truth = grades_2324, estimate = .pred_class, estimator = "macro"
+) |> pull(.estimate) |> (\(x) round(x * 100, 1))()
+```
+
+```{r data-stats, include=FALSE}
+# Load pre-computed statistics from the actual model dataset (54,709 children after na.omit)
+blog_stats        <- readRDS("blog_stats.rds")
+n_children        <- blog_stats$n_children
+pct_food_insecure <- blog_stats$pct_food_insecure
+pct_at_risk       <- blog_stats$pct_at_risk
+pct_food_assist   <- blog_stats$pct_food_assist
+```
+
+---
+
+## Introduction
+
+Education is often seen as one of the main pathways out of poverty. But what happens when children struggle to meet their most basic needs while trying to learn and succeed in school? And what does this have to do with sustainability?
+
+According to Hannah Ritchie, sustainability means improving people’s quality of life today without compromising the well-being of future generations. However, for many children in the United States, access to basic needs such as food is still uncertain. Food insecurity continues to affect millions of families, creating inequalities that can shape children’s opportunities.
+
+Most people would expect that poverty, food insecurity, or health challenges may negatively affect academic performance. But how strongly can these factors actually predict school outcomes?
+
+In this project, we use data from the National Survey of Children’s Health (NSCH) to explore how food insecurity and other social and health-related factors relate to children’s grades in school. Using logistic regression models and interactive visualisations, we examine which factors are most associated with lower academic performance and how different risk factors can combine to model educational outcomes.
+
+---
+
+## The Data
+
+### About the NSCH
+
+The **National Survey of Children's Health (NSCH)** is an annual survey conducted by the Health Resources & Services Administration (HRSA) in partnership with the U.S. Census Bureau. It collects nationally representative data on the physical and emotional health of children ages 0–17 across the United States, along with information about their families, neighborhoods, and access to services.
+
+For this project, we used the **2023–2024 survey cycle**, the most recent data available. The NSCH asks parents or caregivers about their child's health, school performance, food access, family circumstances, and more. Because children's grades are only reported for school-age children, our analysis focuses on respondents ages 6–17.
+
+### Dataset Snapshot
+
+```{r stat-cards}
+div(class = "stat-grid",
+  div(class = "stat-card",
+    div(class = "stat-number", n_children),
+    div(class = "stat-label", "children in our analysis")
+  ),
+  div(class = "stat-card orange",
+    div(class = "stat-number", pct_food_insecure),
+    div(class = "stat-label", "reported food insecurity (sometimes or often not enough food)")
+  ),
+  div(class = "stat-card green",
+    div(class = "stat-number", pct_food_assist),
+    div(class = "stat-label", "families rely on food or cash assistance")
+  ),
+  div(class = "stat-card red",
+    div(class = "stat-number", pct_at_risk),
+    div(class = "stat-label", "received Fair or Poor grades")
+  )
+)
+```
+
+---
+
+## What We Measured
+
+### Outcome: School Grades
+
+The NSCH asks parents or caregivers to evaluate their child’s school grades. The answers are divided into four categories, which we use as the main outcome variable in our analysis:
+```{r message=FALSE, warning=FALSE}
+grades_table <- data.frame(
+  Code = c(1, 2, 3, 4),
+  Label = c("Excellent", "Good", "Fair", "Poor"),
+  Description = c(
+    "Mostly A's",
+    "Mostly B's",
+    "Mostly C's",
+    "Mostly D's or lower"))
+
+grades_table
+```
+
+
+For children ages 12–17, the survey uses a different grade scale, so we combined both age groups into the same four-level grade system.
+
+
+### Predictors
+
+| Domain | Variables included |
+|---|---|
+| **Food security** | Food situation (FoodSit), food & cash assistance types (FoodCash) |
+| **Economic & family** | Poverty level, family structure, housing instability |
+| **Health & development** | General health status, low birth weight, ADHD diagnosis & severity, autism severity, 2+ health conditions, special health care needs, special education plan, repeated a grade, need for mental health care, medication for behavior |
+| **Social** | Bullied by others, bullies others, difficulty making friends, physical activity |
+
+
+---
+
+## At-Risk Grades and the Four Factors
+
+### What is "at-risk"?
+
+For our inferential analysis, we grouped the four grade levels into a binary outcome:
+
+- **At-risk:** Fair or Poor (codes 3–4): the bottom 10% of the sample
+- **Not at-risk:** Excellent or Good (codes 1–2)
+
+This helps us understand which factors are related to children receiving lower grades.
+
+### The four domains we focus on
+
+```{r factor-cards}
+div(class = "factor-grid",
+  div(class = "factor-card",
+    div(class = "factor-title", "Food Access"),
+    p(class = "factor-desc",
+      "How often does the family have enough nutritious food? Ranges from",
+      em("\"always enough\""), "to", em("\"often not enough.\""),
+      "This is the central variable in our analysis."
+    )
+  ),
+  div(class = "factor-card orange",
+    div(class = "factor-title", "Economic Need"),
+    p(class = "factor-desc",
+      "Poverty level relative to the federal poverty line, and how many types of food or",
+      "cash assistance the family relies on."
+    )
+  ),
+  div(class = "factor-card green",
+    div(class = "factor-title", "Health & Development"),
+    p(class = "factor-desc",
+      "Whether the child has an ADHD diagnosis (and its severity), a special education plan,",
+      "2 or more health conditions, or other developmental needs that may affect school performance."
+    )
+  ),
+  div(class = "factor-card purple",
+    div(class = "factor-title", "Family & Social"),
+    p(class = "factor-desc",
+      "Family structure (two-parent, single parent, grandparent household, etc.), bullying",
+      "experiences, ability to make friends, and housing instability."
+    )
+  )
+)
+```
+
+---
+
+## Understanding the Model
+
+### Why Logistic Regression?
+
+We chose **multinomial logistic regression** because it allows us not only to predict grades, but also to better understand how different factors are associated with academic outcomes.
+
+
+- **Probabilities** One important advantage of this model is that it gives probabilities instead of only one final prediction. For each child profile, the model estimates the probability of receiving each grade category: Excellent, Good, Fair, or Poor. This helps us see not only the most likely outcome, but also how certain or uncertain the prediction is. The interactive Grade Predictor in the next section uses these probabilities.
+
+- **Odds ratios.** We also created a logistic regression model to better understand how much each factor is associated with lower grades. This allows us to calculate odds ratios and see how variables such as food insecurity, poverty, or health conditions increase or decrease the odds of at-risk grades.
+
+- **Ridge regularization**: To improve the predictive model, we applied Ridge regularization (L2 penalty). Since the dataset has many predictors and fewer children with lower grades, this helps reduce overfitting and improves the model’s performance on new data. The best penalty value was selected using 5-fold cross-validation.
+
+---
+
+### Handling Imbalanced Data
+
+The NSCH data reflects what we see in real life, where most children receive Excellent or Good grades. Only about `r pct_at_risk` of children in our sample fall into the Fair or Poor categories, which makes the dataset imbalanced. This can create challenges for many models, because a model could predict mostly “Good” grades and still appear highly accurate while failing to identify students who may be more academically vulnerable.
+
+To deal with this issue, we used two main strategies.
+
+**Class weights.** We gave more weight to less common grade categories during training. This means that Fair and Poor grades had a bigger influence on the model, so the model was penalized more when it predicted these students incorrectly.
+
+**Macro recall as the tuning metric.** Instead of focusing only on accuracy, we used macro recall as our main evaluation metric. Recall (sensitivity) measures how well the model identifies students that truly belong to each grade category. Macro recall gives equal importance to all categories, including the less common ones.
+
+We chose this approach because, in this context, *missing a student who may be struggling is more important than incorrectly identifying a lower-risk student*.
+
+---
+
+### Model Performance
+
+```{r conf-matrix-blog, fig.height = 4.5, fig.width = 5.5, message=FALSE, warning=FALSE}
+autoplot(cm_blog, type = "heatmap") +
+  scale_fill_gradient(low = "#eaf4fb", high = "#2980b9") +
+  labs(
+    title    = "Confusion Matrix",
+    subtitle = "Rows = actual grade, columns = predicted grade"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40", size = 10),
+    legend.position = "right"
+  )
+```
+
+The diagonal cells represent correct predictions, while the other cells show where the model made mistakes. The model performs better at identifying Excellent and Good grades, which are the most common categories in the dataset. However, it has more difficulty predicting Fair and Poor grades, which are less common but also the main focus of this project.
+
+#### Recall by Grade Category
+
+```{r recall-by-class, fig.height = 3.2, fig.width = 6, message=FALSE, warning=FALSE}
+grade_colors <- c(
+  "Excellent" = "#1a6b45",
+  "Good"      = "#74c69d",
+  "Fair"      = "#f4a261",
+  "Poor"      = "#c0392b"
+)
+
+test_preds |>
+  group_by(Grade = grades_2324) |>
+  summarise(
+    Recall = sum(.pred_class == grades_2324) / n(),
+    .groups = "drop"
+  ) |>
+  mutate(Grade = factor(Grade, levels = c("Poor", "Fair", "Good", "Excellent"))) |>
+  ggplot(aes(x = Recall, y = Grade, fill = Grade)) +
+  geom_col(width = 0.55) +
+  geom_vline(xintercept = macro_recall / 100, linetype = "dashed", color = "grey40") +
+  annotate("text", x = macro_recall / 100 + 0.02, y = 0.55,
+           label = paste0("Macro avg: ", macro_recall, "%"),
+           hjust = 0, size = 3.5, color = "grey40") +
+  scale_fill_manual(values = grade_colors) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title    = "Per-Class Recall on the Test Set",
+    subtitle = "What fraction of each actual grade category did the model correctly identify?",
+    x        = "Recall",
+    y        = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position    = "none",
+    plot.title         = element_text(face = "bold"),
+    plot.subtitle      = element_text(color = "grey40", size = 10),
+    panel.grid.major.y = element_blank()
+  )
+```
+
+A macro recall of `r macro_recall`% means the model correctly identifies about `r macro_recall` out of every 100 students across all grade categories, including the less common Fair and Poor groups. While the model performs much better than a simple model that ignores minority classes, it should not be seen as a standalone tool for identifying at-risk students.
+
+#### Actual vs. Predicted Grade Distribution
+
+```{r actual-vs-predicted, fig.height = 3.8, fig.width = 7, message=FALSE, warning=FALSE}
+bind_rows(
+  test_preds |> count(Grade = grades_2324) |> mutate(Type = "Actual"),
+  test_preds |> count(Grade = .pred_class)  |> mutate(Type = "Predicted")
+) |>
+  group_by(Type) |>
+  mutate(
+    pct   = n / sum(n),
+    Grade = factor(Grade, levels = c("Excellent", "Good", "Fair", "Poor"))
+  ) |>
+  ungroup() |>
+  ggplot(aes(x = Grade, y = pct, fill = Type)) +
+  geom_col(position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Actual" = "#2980b9", "Predicted" = "#e67e22")) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title    = "Actual vs. Predicted Grade Distribution",
+    subtitle = "Class weights push predicted rates for Fair and Poor closer to actual rates",
+    x        = NULL,
+    y        = "Share of Test Set",
+    fill     = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40", size = 10),
+    legend.position = "top"
+  )
+```
+
+
+---
+
+## Our Findings
+
+### Key Numbers
+
+```{r callout-boxes}
+div(
+  style = "display: flex; gap: 20px; margin: 20px 0;",
+  div(
+    style = "flex: 1; background: #eaf4fb; border-left: 5px solid #2980b9; padding: 18px 22px; border-radius: 4px;",
+    tags$h3(style = "margin: 0 0 8px 0; color: #2980b9;", paste0(or_foodsit, "\u00D7")),
+    tags$p(style = "margin: 0; font-size: 0.95em;",
+      "higher odds of receiving ", tags$strong("Fair or Poor grades"),
+      " for each step toward worse food access, after controlling for age,
+       sex, poverty, family structure, and ADHD severity."
+    )
+  ),
+  div(
+    style = "flex: 1; background: #fef9ec; border-left: 5px solid #e67e22; padding: 18px 22px; border-radius: 4px;",
+    tags$h3(style = "margin: 0 0 8px 0; color: #e67e22;", paste0(or_foodcash, "\u00D7")),
+    tags$p(style = "margin: 0; font-size: 0.95em;",
+      "higher odds of at-risk grades for each additional type of food and
+       cash assistance a family relies on (marker of ", tags$strong("greater economic need"), ".)"
+    )
+  )
+)
+```
+
+Both associations are statistically significant (p < 0.001).
+
+> **Note on causality:** These results show associations, not causation. Since the data comes from a cross-sectional survey, we cannot say that food insecurity directly causes lower grades. Other factors that were not measured, such as neighborhood conditions or family stress, may also influence both food insecurity and academic performance.
+
+---
+
+### How Food Security Shifts Grade Outcomes
+
+The chart below uses our trained model to show the **predicted grade distribution** across all
+four food security levels. You can adjust the demographic controls on the left to explore how these patterns change across different groups of children.
+
+```{r interactive-viz, message=FALSE, warning=FALSE}
+shinyApp(
+  ui = fluidPage(
+    fluidRow(
+      
+      # --- Controls ---
+      column(3,
+        wellPanel(
+          style = "background: #f8f9fa;",
+          tags$h5("Demographic Controls", style = "margin-bottom: 16px;"),
+          
+          selectInput("food_cash",
+            "Food & Cash Assistance:",
+            choices = c("None" = 1, "1-2 types" = 2, "3-5 types" = 3),
+            selected = 1
+          ),
+          selectInput("pov_lev",
+            "Poverty Level:",
+            choices = c(
+              "Below poverty (0-99%)"    = 1,
+              "Near poverty (100-199%)"  = 2,
+              "Middle income (200-399%)" = 3,
+              "Above 400% poverty"       = 4
+            ),
+            selected = 2
+          ),
+          selectInput("fam_struct",
+            "Family Structure:",
+            choices = c(
+              "Two parents (married)"     = 1,
+              "Two parents (not married)" = 2,
+              "Single parent"             = 3,
+              "Grandparent household"     = 4,
+              "Other family type"         = 5
+            ),
+            selected = 1
+          ),
+          selectInput("age_grp",
+            "Child Age Group:",
+            choices = c(
+              "Ages 4-7"   = 2,
+              "Ages 8-11"  = 3,
+              "Ages 12-14" = 4,
+              "Ages 15-17" = 5
+            ),
+            selected = 3
+          ),
+          selectInput("sex",
+            "Sex:",
+            choices = c("Male" = 1, "Female" = 2),
+            selected = 1
+          )
+        )
+      ),
+      
+      # --- Chart ---
+      column(9,
+        plotOutput("grade_shift_plot", height = "420px"),
+        tags$p(
+          style = "font-size: 0.82em; color: #777; margin-top: 6px;",
+          "Predictions from a class-weighted multinomial Ridge logistic regression. ",
+          "All other health and social variables are held at typical non-at-risk values."
+        )
+      )
+    )
+  ),
+  
+  server = function(input, output, session) {
+    output$grade_shift_plot <- renderPlot({
+      
+      food_probs <- purrr::map_dfr(1:4, function(fs) {
+        nd <- data.frame(
+          FoodSit_2324     = fs,
+          FoodCash_2324    = as.integer(input$food_cash),
+          povlev4_2324     = as.integer(input$pov_lev),
+          famstruct5_2324  = as.integer(input$fam_struct),
+          age5_2324        = as.integer(input$age_grp),
+          sex_2324         = as.integer(input$sex),
+          SpEducPln_2324   = 2,
+          ChHlthSt_2324    = 1,
+          LowBWght_2324    = 2,
+          Cond2more_2324   = 1,
+          CSHCN_2324       = 1,
+          ADHDind_2324     = 1,
+          ADHDSevInd_2324  = 1,
+          bullied_2324     = 1,
+          bully_2324       = 1,
+          MakeFriend_2324  = 1,
+          MEDB10ScrQ5_2324 = 1,
+          MedCare_2324     = 1,
+          MentHCare_2324   = 3,
+          ReptGrade_2324   = 2,
+          HousingInstab_2324 = 2,
+          ASDSevInd_2324   = 1,
+          PhysAct_2324     = 1
+        )
+        predict(fitted_final, new_data = nd, type = "prob") |>
+          mutate(food_sit = fs)
+      })
+      
+      plot_data <- food_probs |>
+        pivot_longer(starts_with(".pred_"), names_to = "grade", values_to = "prob") |>
+        mutate(
+          grade = str_remove(grade, "\\.pred_"),
+          grade = factor(grade, levels = c("Poor", "Fair", "Good", "Excellent")),
+          food_sit_label = factor(
+            food_sit,
+            levels = 1:4,
+            labels = c(
+              "Always enough\nnutritious food",
+              "Usually enough,\nnot always nutritious",
+              "Sometimes not\nenough food",
+              "Often not\nenough food"
+            )
+          )
+        )
+      
+      ggplot(plot_data, aes(x = food_sit_label, y = prob, fill = grade)) +
+        geom_col(position = "stack", width = 0.55) +
+        scale_fill_manual(
+          values = c(
+            "Excellent" = "#1a6b45",
+            "Good"      = "#74c69d",
+            "Fair"      = "#f4a261",
+            "Poor"      = "#c0392b"
+          ),
+          guide = guide_legend(reverse = TRUE)
+        ) +
+        scale_y_continuous(labels = percent_format(accuracy = 1), expand = c(0, 0)) +
+        labs(
+          title    = "Predicted Grade Distribution by Food Security Level",
+          subtitle = "Stacked bars show probability of each grade category for the selected profile",
+          x        = "Food Security Situation",
+          y        = "Predicted Probability",
+          fill     = "Grade Category"
+        ) +
+        theme_minimal(base_size = 14) +
+        theme(
+          plot.title    = element_text(face = "bold", size = 15),
+          plot.subtitle = element_text(color = "grey40", size = 11),
+          axis.text.x   = element_text(size = 11),
+          panel.grid.major.x = element_blank(),
+          legend.position = "right"
+        )
+    })
+  },
+  
+  options = list(height = 520)
+)
+```
+
+---
+
+### Confidence in the Numbers: Odds Ratios
+
+The chart below shows results from our inferential logistic regression model, which was created to better understand how strongly different factors are related to at-risk grades. Each bar represents an odds ratio for one variable. Bars that extend past the dashed line at 1.0 indicate a higher likelihood of receiving Fair or Poor grades.
+
+```{r or-plot, fig.height = 4.5, fig.width = 8, message=FALSE, warning=FALSE}
+term_labels <- c(
+  FoodSit_2324     = "Food Security Situation",
+  FoodCash_2324    = "Food & Cash Assistance",
+  ADHDSevInd_2324  = "ADHD Severity",
+  povlev4_2324     = "Poverty Level",
+  age5_2324        = "Child Age Group",
+  famstruct5_2324  = "Family Structure",
+  sex_2324         = "Sex"
+)
+
+odds_ratios |>
+  mutate(
+    label = dplyr::recode(term, !!!term_labels),
+    label = ifelse(is.na(label), term, label)
+  ) |>
+  ggplot(aes(x = estimate, y = reorder(label, estimate), color = role)) +
+  geom_segment(aes(xend = 1, yend = reorder(label, estimate)),
+               linewidth = 0.4, color = "grey80") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 height = 0.25, linewidth = 0.8) +
+  geom_point(aes(size = significant), show.legend = FALSE) +
+  scale_size_manual(values = c("TRUE" = 3.5, "FALSE" = 2)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey50", linewidth = 0.7) +
+  scale_color_manual(
+    values = c("Food security (focal)" = "#2980b9", "Control variable" = "#aaaaaa"),
+    name   = NULL
+  ) +
+  scale_x_continuous(breaks = seq(0.8, 1.6, by = 0.1)) +
+  labs(
+    title    = "Odds Ratios from the Inferential Model",
+    subtitle = "Outcome: Fair/Poor vs Excellent/Good grades. OR > 1 = higher odds of at-risk grades.",
+    x        = "Odds Ratio (95% CI)",
+    y        = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "grey40", size = 10),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
+<div class="highlight-note">
+Food security variables are the focal predictors. Each step toward worse food access is associated with roughly <strong>`r or_foodsit`&times;</strong> higher odds of at-risk grades, comparable in magnitude to the effect of moving one step down the poverty scale.
+</div>
+
+---
+
+### Which Variables Matter Most?
+
+The chart below shows the **top 20 predictors** from the predictive multinomial model, ranked by their mean absolute coefficient across all four grade categories. Longer bars indicate that the model relied more heavily on that variable.
+
+```{r vip-plot, fig.height = 5.5, fig.width = 8, message=FALSE, warning=FALSE}
+vip_labels <- c(
+  SpEducPln_2324   = "Special Education Plan",
+  ADHDSevInd_2324  = "ADHD Severity",
+  FoodSit_2324     = "Food Security Situation",
+  FoodCash_2324    = "Food & Cash Assistance",
+  povlev4_2324     = "Poverty Level",
+  famstruct5_2324  = "Family Structure",
+  age5_2324        = "Child Age Group",
+  sex_2324         = "Sex",
+  ChHlthSt_2324    = "General Health Status",
+  bullied_2324     = "Bullied by Others",
+  MakeFriend_2324  = "Difficulty Making Friends",
+  ReptGrade_2324   = "Repeated a Grade",
+  MentHCare_2324   = "Mental Health Care Need",
+  CSHCN_2324       = "Special Health Care Needs",
+  Cond2more_2324   = "2+ Health Conditions",
+  bully_2324       = "Bullies Others",
+  HousingInstab_2324 = "Housing Instability",
+  LowBWght_2324    = "Low Birth Weight",
+  PhysAct_2324     = "Physical Activity",
+  MEDB10ScrQ5_2324 = "Medication for Behavior",
+  ASDSevInd_2324   = "Autism Severity",
+  ADHDind_2324     = "ADHD Diagnosis",
+  MedCare_2324     = "Medical Care Access"
+)
+
+vip_data |>
+  mutate(
+    label      = dplyr::recode(Variable, !!!vip_labels),
+    label      = ifelse(is.na(label), Variable, label),
+    is_food    = Variable %in% c("FoodSit_2324", "FoodCash_2324"),
+    bar_color  = ifelse(is_food, "#2980b9", "#b0bec5")
+  ) |>
+  ggplot(aes(x = Importance, y = reorder(label, Importance), fill = bar_color)) +
+  geom_col(width = 0.65) +
+  scale_fill_identity() +
+  labs(
+    title    = "Top 20 Predictors — Logistic Regression (Class-Weighted)",
+    subtitle = "Blue bars = food security variables. Importance = mean |coefficient| across grade classes.",
+    x        = "Importance",
+    y        = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "grey40", size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank()
+  )
+```
+
+---
+
+### Predict a Child's Grade
+
+Use the controls below to build a child profile and see what grade category the model predicts.
+The bar chart shows the probability the model assigns to each grade level, the highlighted box
+shows the most likely outcome.
+
+```{r grade-predictor, message=FALSE, warning=FALSE}
+shinyApp(
+  ui = fluidPage(
+    style = "font-family: 'Helvetica Neue', Arial, sans-serif;",
+    fluidRow(
+      column(4,
+        wellPanel(
+          style = "background: #f8f9fa;",
+          tags$h5("Build a Child Profile", style = "margin-bottom: 16px;"),
+          selectInput("sp_age", "Age Group:",
+            choices = c("Ages 4-7"   = 2, "Ages 8-11"  = 3,
+                        "Ages 12-14" = 4, "Ages 15-17" = 5),
+            selected = 3
+          ),
+          selectInput("sp_sex", "Sex:",
+            choices = c("Male" = 1, "Female" = 2),
+            selected = 1
+          ),
+          selectInput("sp_foodsit", "Food Security:",
+            choices = c(
+              "Always enough nutritious food"        = 1,
+              "Usually enough, not always nutritious" = 2,
+              "Sometimes not enough food"             = 3,
+              "Often not enough food"                 = 4
+            ),
+            selected = 1
+          ),
+          selectInput("sp_foodcash", "Food & Cash Assistance:",
+            choices = c("None" = 1, "1-2 types" = 2, "3-5 types" = 3),
+            selected = 1
+          ),
+          selectInput("sp_pov", "Poverty Level:",
+            choices = c(
+              "Below poverty (0-99%)"    = 1,
+              "Near poverty (100-199%)"  = 2,
+              "Middle income (200-399%)" = 3,
+              "Above 400% poverty"       = 4
+            ),
+            selected = 3
+          ),
+          selectInput("sp_fam", "Family Structure:",
+            choices = c(
+              "Two parents (married)"     = 1,
+              "Two parents (not married)" = 2,
+              "Single parent"             = 3,
+              "Grandparent household"     = 4,
+              "Other family type"         = 5
+            ),
+            selected = 1
+          ),
+          selectInput("sp_speducpln", "Special Education Plan:",
+            choices = c("Yes" = 1, "No" = 2),
+            selected = 2
+          ),
+          selectInput("sp_physact", "Active 60+ min/day:",
+            choices = c("Yes" = 1, "No" = 2),
+            selected = 1
+          )
+        )
+      ),
+      column(8,
+        tags$h5("Predicted Grade Probabilities", style = "margin-bottom: 4px;"),
+        plotOutput("pred_plot", height = "260px"),
+        tags$br(),
+        uiOutput("pred_class_box"),
+        tags$p(
+          style = "font-size: 0.82em; color: #777; margin-top: 12px;",
+          "Predictions from a class-weighted multinomial Ridge logistic regression trained on",
+          "2023-2024 NSCH data. Health and social variables not listed above are held at",
+          "typical non-at-risk values."
+        )
+      )
+    )
+  ),
+  
+  server = function(input, output, session) {
+    
+    pred_data <- reactive({
+      nd <- data.frame(
+        FoodSit_2324       = as.integer(input$sp_foodsit),
+        FoodCash_2324      = as.integer(input$sp_foodcash),
+        povlev4_2324       = as.integer(input$sp_pov),
+        famstruct5_2324    = as.integer(input$sp_fam),
+        age5_2324          = as.integer(input$sp_age),
+        sex_2324           = as.integer(input$sp_sex),
+        SpEducPln_2324     = as.integer(input$sp_speducpln),
+        PhysAct_2324       = as.integer(input$sp_physact),
+        # All remaining predictors held at non-at-risk defaults
+        ChHlthSt_2324      = 1,
+        LowBWght_2324      = 2,
+        Cond2more_2324     = 1,
+        CSHCN_2324         = 1,
+        ADHDind_2324       = 1,
+        ADHDSevInd_2324    = 1,
+        bullied_2324       = 1,
+        bully_2324         = 1,
+        MakeFriend_2324    = 1,
+        MEDB10ScrQ5_2324   = 1,
+        MedCare_2324       = 1,
+        MentHCare_2324     = 3,
+        ReptGrade_2324     = 2,
+        HousingInstab_2324 = 2,
+        ASDSevInd_2324     = 1
+      )
+      predict(fitted_final, new_data = nd, type = "prob") |>
+        pivot_longer(everything(), names_to = "grade", values_to = "prob") |>
+        mutate(
+          grade = str_remove(grade, "\\.pred_"),
+          grade = factor(grade, levels = c("Poor", "Fair", "Good", "Excellent"))
+        )
+    })
+    
+    output$pred_plot <- renderPlot({
+      ggplot(pred_data(), aes(x = prob, y = grade, fill = grade)) +
+        geom_col(width = 0.5) +
+        scale_fill_manual(values = c(
+          "Excellent" = "#1a6b45",
+          "Good"      = "#74c69d",
+          "Fair"      = "#f4a261",
+          "Poor"      = "#c0392b"
+        )) +
+        scale_x_continuous(
+          labels = percent_format(accuracy = 1),
+          expand = c(0, 0),
+          limits = c(0, 1)
+        ) +
+        labs(x = "Predicted Probability", y = NULL) +
+        theme_minimal(base_size = 13) +
+        theme(
+          legend.position    = "none",
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor   = element_blank()
+        )
+    })
+    
+    output$pred_class_box <- renderUI({
+      best <- pred_data() |> slice_max(prob, n = 1)
+      grade_colors <- c(
+        "Excellent" = "#1a6b45",
+        "Good"      = "#74c69d",
+        "Fair"      = "#f4a261",
+        "Poor"      = "#c0392b"
+      )
+      col <- grade_colors[as.character(best$grade)]
+      div(
+        style = paste0(
+          "background:", col, "22; border-left:5px solid ", col, ";",
+          "padding:12px 20px; border-radius:4px; display:inline-block;"
+        ),
+        tags$strong(
+          style = paste0("color:", col, "; font-size:1.05em;"),
+          paste0("Most likely grade: ", best$grade,
+                 " (", round(best$prob * 100, 1), "% probability)")
+        )
+      )
+    })
+  },
+  
+  options = list(height = 580)
+)
+```
+
+---
+
+### Child Profiles
+
+The two profiles below show how different factors can combine or balance each other out to influence a child’s predicted academic outcomes. Each profile was created using combinations of values from the NSCH survey and then tested in our trained model.
+
+```{r profile-data, include=FALSE}
+profile_1 <- data.frame(
+  SpEducPln_2324   = 1,  # on a special ed plan
+  famstruct5_2324  = 1,  # married parents
+  povlev4_2324     = 4,  # over 400% poverty
+  PhysAct_2324     = 1,  # gets 60 mins a day
+  FoodCash_2324    = 1,  # does not receive food cash
+  sex_2324         = 2,  # female
+  age5_2324        = 3,  # 8-11 yrs old
+  ChHlthSt_2324    = 1,  # excellent or very good
+  LowBWght_2324    = 1,  # yes
+  Cond2more_2324   = 3,  # currently has condition
+  CSHCN_2324       = 2,  # meets screener criteria (capped at 2, max in training data)
+  ADHDind_2324     = 1,  # does not have condition
+  ADHDSevInd_2324  = 1,  # does not have condition
+  bullied_2324     = 3,  # bullied once or twice a month
+  bully_2324       = 1,  # never bully others in past 12 months
+  MakeFriend_2324  = 3,  # a lot of difficulty
+  MEDB10ScrQ5_2324 = 3,  # currently has condition
+  MedCare_2324     = 1,  # yes
+  MentHCare_2324   = 3,  # no need
+  ReptGrade_2324   = 2,  # no
+  FoodSit_2324     = 1,  # always get enough nutritious food
+  HousingInstab_2324 = 2, # did not experience housing insecurity
+  ASDSevInd_2324   = 3   # ASD rated moderate or severe
+)
+
+profile_2 <- data.frame(
+  SpEducPln_2324   = 2,  # not on a special ed plan
+  famstruct5_2324  = 3,  # single parent
+  povlev4_2324     = 2,  # 100-199 percent poverty level
+  PhysAct_2324     = 2,  # doesn't get 60 mins a day
+  FoodCash_2324    = 2,  # one or two types
+  sex_2324         = 1,  # male
+  age5_2324        = 5,  # 15-17 yrs old
+  ChHlthSt_2324    = 2,  # good
+  LowBWght_2324    = 2,  # no
+  Cond2more_2324   = 1,  # does not have condition
+  CSHCN_2324       = 1,  # does not meet any screener criteria
+  ADHDind_2324     = 3,  # currently has condition
+  ADHDSevInd_2324  = 2,  # current condition, rated mild
+  bullied_2324     = 1,  # never been bullied in past 12 months
+  bully_2324       = 3,  # bullies others once or twice a month
+  MakeFriend_2324  = 1,  # no difficulty
+  MEDB10ScrQ5_2324 = 3,  # currently has condition
+  MedCare_2324     = 2,  # none in past year
+  MentHCare_2324   = 3,  # no need
+  ReptGrade_2324   = 2,  # no
+  FoodSit_2324     = 3,  # sometimes not enough food
+  HousingInstab_2324 = 1, # did experience housing insecurity
+  ASDSevInd_2324   = 1   # does not have ASD
+)
+
+profile_3 <- data.frame(
+  SpEducPln_2324   = 2,  # not on a special ed plan
+  famstruct5_2324  = 2,  # not married parents
+  povlev4_2324     = 4,  # 400%+ over poverty level
+  PhysAct_2324     = 1,  # does get 60 mins a day exercise
+  FoodCash_2324    = 1,  # none
+  sex_2324         = 1,  # male
+  age5_2324        = 2,  # 4-7 yrs old
+  ChHlthSt_2324    = 1,  # very good
+  LowBWght_2324    = 2,  # no
+  Cond2more_2324   = 1,  # no condition
+  CSHCN_2324       = 1,  # does not meet any screener criteria
+  ADHDind_2324     = 1,  # no ADHD
+  ADHDSevInd_2324  = 1,  # no condition
+  bullied_2324     = 5,  # every day
+  bully_2324       = 3,  # twice a month
+  MakeFriend_2324  = 3,  # a lot of difficulty
+  MEDB10ScrQ5_2324 = 1,  # does not have condition
+  MedCare_2324     = 1,  # yes, check up in past year
+  MentHCare_2324   = 3,  # no need
+  ReptGrade_2324   = 2,  # no
+  FoodSit_2324     = 1,  # always enough food
+  HousingInstab_2324 = 2, # did not experience housing insecurity
+  ASDSevInd_2324   = 1   # no ASD
+)
+
+# Predicted class for inline text
+p1_pred <- predict(fitted_final, new_data = profile_1)$.pred_class
+p2_pred <- predict(fitted_final, new_data = profile_2)$.pred_class
+p3_pred <- predict(fitted_final, new_data = profile_3)$.pred_class
+
+# Predicted probabilities for all three profiles
+probs_combined <- bind_rows(
+  predict(fitted_final, new_data = profile_1, type = "prob") |>
+    mutate(Profile = "Profile 1\n(10F, Moderate Autism)"),
+  predict(fitted_final, new_data = profile_2, type = "prob") |>
+    mutate(Profile = "Profile 2\n(16M, ADHD & Food Insecure)"),
+  predict(fitted_final, new_data = profile_3, type = "prob") |>
+    mutate(Profile = "Profile 3\n(6M, Bullied Daily)")
+) |>
+  pivot_longer(starts_with(".pred_"), names_to = "Grade", values_to = "Probability") |>
+  mutate(
+    Grade   = str_remove(Grade, "\\.pred_"),
+    Grade   = factor(Grade, levels = c("Poor", "Fair", "Good", "Excellent")),
+    Profile = factor(Profile, levels = c(
+      "Profile 1\n(10F, Moderate Autism)",
+      "Profile 2\n(16M, ADHD & Food Insecure)",
+      "Profile 3\n(6M, Bullied Daily)"
+    ))
+  )
+```
+
+```{r profile-cards}
+tag <- function(label, type = "neutral") {
+  tags$span(class = paste0("tag tag-", type), label)
+}
+
+div(class = "profile-grid",
+
+  # --- Profile 1 ---
+  div(class = "profile-card",
+    div(class = "profile-name", "Profile 1 — 10-Year-Old Female"),
+    p(class = "profile-detail",
+      "10 year old female with rated moderate autism. This may represent a student",
+      "who is on the autism spectrum and has some behavior problems, but has the",
+      "resources and family support to help with school."
+    ),
+    div(style = "margin-top: 10px;",
+      tag("Married parents",           "protect"),
+      tag("Above 400% poverty",        "protect"),
+      tag("Food secure",               "protect"),
+      tag("Physically active",         "protect"),
+      tag("Excellent / very good health", "protect"),
+      tag("Physical checkup",          "protect"),
+      tag("Special ed plan",           "neutral"),
+      tag("Moderate autism",           "neutral"),
+      tag("2+ conditions",             "neutral"),
+      tag("Bullied 1-2x per month",    "risk"),
+      tag("Difficulty making friends", "risk"),
+      tag("Low birth weight",          "risk")
+    )
+  ),
+
+  # --- Profile 2 ---
+  div(class = "profile-card", style = "border-top-color: #c0392b;",
+    div(class = "profile-name", "Profile 2 — 16-Year-Old Male"),
+    p(class = "profile-detail",
+      "A 16 year old male with mild ADHD who has a single parent with low income,",
+      "and lives with 2 other siblings. This represents a student who is food insecure.",
+      "The student bullies others occasionally (once or twice a month).",
+      "He did experience housing instability."
+    ),
+    div(style = "margin-top: 10px;",
+      tag("Single parent",             "risk"),
+      tag("Near poverty (100-199%)",   "risk"),
+      tag("Sometimes not enough food", "risk"),
+      tag("Housing instability",       "risk"),
+      tag("Mild ADHD",                 "risk"),
+      tag("No physical checkup",       "risk"),
+      tag("Food assistance",           "risk"),
+      tag("Not physically active",     "risk"),
+      tag("Never bullied",             "protect"),
+      tag("Makes friends easily",      "protect"),
+      tag("No special ed plan",        "neutral")
+    )
+  ),
+
+  # --- Profile 3 ---
+  div(class = "profile-card", style = "border-top-color: #e67e22;",
+    div(class = "profile-name", "Profile 3 — 6-Year-Old Male"),
+    p(class = "profile-detail",
+      "A 6 year old student who has no reported issues with mental or physical health.",
+      "However, he has trouble making friends at school and is bullied every day.",
+      "He occasionally bullies others, too."
+    ),
+    div(style = "margin-top: 10px;",
+      tag("Above 400% poverty",        "protect"),
+      tag("Food secure",               "protect"),
+      tag("Physically active",         "protect"),
+      tag("Very good health",          "protect"),
+      tag("No health conditions",      "protect"),
+      tag("Physical checkup",          "protect"),
+      tag("Bullied every day",         "risk"),
+      tag("Difficulty making friends", "risk"),
+      tag("Bullies others",            "risk"),
+      tag("Parents not married",       "neutral")
+    )
+  )
+)
+```
+
+```{r profile-probs-plot, fig.height = 4.2, fig.width = 11, message=FALSE, warning=FALSE}
+grade_pal <- c(
+  "Excellent" = "#1a6b45",
+  "Good"      = "#74c69d",
+  "Fair"      = "#f4a261",
+  "Poor"      = "#c0392b"
+)
+
+ggplot(probs_combined, aes(x = Probability, y = Grade, fill = Grade)) +
+  geom_col(width = 0.55) +
+  facet_wrap(~Profile, ncol = 3) +
+  scale_fill_manual(values = grade_pal) +
+  scale_x_continuous(labels = percent_format(accuracy = 1),
+                     limits = c(0, 1), expand = c(0, 0)) +
+  labs(
+    title    = "Predicted Grade Probabilities for Each Profile",
+    subtitle = "Based on the class-weighted multinomial Ridge logistic regression",
+    x        = "Predicted Probability",
+    y        = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position    = "none",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    strip.text         = element_text(face = "bold", size = 10),
+    plot.title         = element_text(face = "bold"),
+    plot.subtitle      = element_text(color = "grey40", size = 10),
+    panel.spacing      = unit(2, "lines")
+  )
+```
+
+Profile 1 is predicted to have **`r p1_pred`** grades. Even with autism, social difficulties, and low birth weight, this profile also includes protective factors such as food security, married parents, and stronger economic stability.
+
+Profile 2 is predicted to have **`r p2_pred`** grades. This profile shows several risk factors happening at the same time, including food insecurity, housing instability, low income, ADHD, and limited access to health care. 
+
+Profile 3 is predicted to have **`r p3_pred`** grades. Although this child experiences severe bullying and social difficulties, the profile also includes food security, no major health conditions, and strong economic stability. This shows how the model considers multiple factors together.
+
+Overall, these profiles show one of the main findings of our analysis: academic risk is usually connected to a combination of challenges and protective factors happening at the same time.
+
+---
+
+## Limitations
+
+**Survey data and self-report.** The NSCH is based on information reported by parents or caregivers. Variables such as grades, food access, and health conditions are not taken from school or medical records, which means the data may include reporting errors. In some cases, families may also underreport certain situations, especially topics that can be sensitive.
+
+**Correlation does not imply causation.** Our analysis is observational and cross-sectional, which means the data was collected at a single point in time. Because of this, we cannot follow children over the years or determine cause-and-effect relationships.
+
+**Variables.** Although the NSCH dataset includes many important variables, it does not capture every factor that can influence academic performance. Variables such as school quality, neighborhood safety, parental education, access to tutoring, sleep quality, and screen time are not included in the model.
+
+**Model performance limits.** A macro recall of `r macro_recall`% still means that many at-risk children are not correctly identified by the model. Because of this, the model should be seen mainly as a research tool for understanding patterns and associations in the population, rather than as a reliable tool for evaluating individual child.
+
+**Dataset limitation** We could only use data from 2023-2024 since the other years’ datasets do not have grade information, which is out metric
+
+
+
+---
+
+## Why This Matters
+
+As we discussed earlier, sustainability is about improving people’s quality of life today without harming future generations. Education is an important part of this, since school performance can affect future opportunities, economic mobility, and overall well-being.
+
+What our analysis shows is that lower academic performance is usually connected to multiple challenges happening at the same time. Children more likely to receive Fair or Poor grades are also often experiencing food insecurity, economic hardship, health conditions, or unstable family situations.
+
+One of the strongest findings in our model is the relationship between food insecurity and academic risk. According to our results, children experiencing food insecurity have about `r or_foodsit` times higher odds of struggling academically, even after considering other factors such as poverty level. While this does not prove causation, it highlights how important basic needs and family support may be for children’s educational outcomes.
+
+---
+
+## Future Work
+
+This project is only a starting point, and there are many ways the analysis could be improved in the future.
+
+An important improvement would be using longitudinal data that follows the same children over multiple years. This could help researchers better understand how changes in food security may relate to changes in school performance over time.
+
+Our model does not have geographic location, so future studies could also explore geographic differences, since food insecurity and school quality can vary a lot across states and regions.
+
+---
+
+*Data source: National Survey of Children's Health (NSCH) 2023–2024.*
