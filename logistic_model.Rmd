@@ -2,6 +2,7 @@
 title: "Logistic Regression: Grade Outcomes"
 author: "Gabrielle Arrache and Naomi Francis"
 output: html_document
+date: "`r Sys.Date()`"
 ---
 
 # Setup
@@ -15,21 +16,7 @@ library(broom)
 ---
 
 # Data Preparation
-
-```{r}
-# See if clean_data.Rmd has been executed
-df_23_24_clean <- read.csv("df_23_24_clean.csv")
-df_model <- df_23_24_clean |>
-  mutate(grades_2324 = factor(
-    grades_2324, 
-    levels = c(1, 2, 3, 4),
-    labels = c("Excellent", "Good", "Fair", "Poor")
-  ))
-
-
-cat("Grade distribution (%):\n")
-round(prop.table(table(df_model$grades_2324)) * 100, 1)
-```
+run clean_data.Rmd first
 
 ---
 
@@ -51,7 +38,7 @@ nrow(test)
 
 # Class Imbalance Handling
 
-Because the lower-grade classes are less common, we used class weights so the model gives them more attention during training.
+Because the lower-grade classes are less common, I used class weights so the model gives them more attention during training.
 
 ```{r class-weights}
 n_total <- nrow(train)
@@ -62,11 +49,16 @@ weights_lookup <- n_total / class_counts
 print(round(weights_lookup, 2))
 
 train_w <- train |>
-  mutate( case_wt = importance_weights(as.numeric(weights_lookup[as.character(grades_2324)])))
+  mutate(
+    case_wt = importance_weights(
+      as.numeric(weights_lookup[as.character(grades_2324)])
+    )
+  )
 ```
 
 ---
 
+# Workflow
 
 ```{r recipe-and-model}
 recipe_lr <- recipe(grades_2324 ~ ., data = train_w) |>
@@ -75,7 +67,8 @@ recipe_lr <- recipe(grades_2324 ~ ., data = train_w) |>
 
 lr_spec <- multinom_reg(
   penalty = tune(),
-  mixture = 0) |>
+  mixture = 0
+) |>
   set_engine("glmnet")
 
 lr_wf <- workflow() |>
@@ -101,7 +94,8 @@ lr_tune <- tune_grid(
   lr_wf,
   resamples = cv_folds,
   grid      = penalty_grid,
-  metrics   = metric_set(recall))
+  metrics   = metric_set(recall)
+)
 
 show_best(lr_tune, metric = "recall", n = 5)
 ```
@@ -127,7 +121,8 @@ final_wf <- lr_wf |> finalize_workflow(best_penalty)
 final_fit <- last_fit(
   final_wf,
   split   = split,
-  metrics = metric_set(accuracy, recall))
+  metrics = metric_set(accuracy, recall)
+)
 ```
 
 ---
@@ -146,7 +141,8 @@ cm <- conf_mat(preds, truth = grades_2324, estimate = .pred_class)
 autoplot(cm, type = "heatmap") +
   labs(
     title    = "Confusion Matrix",
-    subtitle = "Test set performance (Class-weighted)")
+    subtitle = "Test set performance (Class-weighted)"
+  )
 ```
 
 ```{r class-report}
@@ -179,7 +175,7 @@ ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
 
 ---
 
-# Findings
+# Summary of Findings
 
 ## Performance
 
@@ -193,11 +189,12 @@ preds |>
   mutate(across(everything(), \(x) round(x, 3)))
 ```
 
+
 ---
 
 # Inferential Analysis: Odds Ratios
 
-To better understand how much these variables effects grades, we use an unregularized logistic regression with a binary outcome (At Risk vs. Not At Risk) to calculate Odds Ratios.
+To better understand the magnitude of these effects, we use an unregularized logistic regression on a binary outcome (At Risk vs. Not At Risk) to calculate Odds Ratios.
 
 ## Binary Outcome
 
@@ -217,7 +214,7 @@ df_infer |>
 
 ## Model Estimation
 
-We focus on food security variables while controlling for age, sex, poverty, family structure, and ADHD severity.
+We focused on food security variables while controlling for age, sex, poverty, family structure, and ADHD severity.
 
 ```{r infer-glm}
 infer_fit <- glm(
@@ -225,7 +222,8 @@ infer_fit <- glm(
             age5_2324 + sex_2324 + povlev4_2324 + famstruct5_2324 +  
             ADHDSevInd_2324,                                          
   data   = df_infer,
-  family = binomial)
+  family = binomial
+)
 
 summary(infer_fit)
 ```
@@ -267,6 +265,7 @@ ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)
   ) +
   theme(legend.position = "bottom")
 ```
+
 
 ## Saving Model
 ```{r} 
