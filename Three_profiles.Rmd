@@ -24,7 +24,7 @@ profile_1 <- data.frame(
       ChHlthSt_2324 = 1, # excellent or very good
       LowBWght_2324 = 1, # yes
       Cond2more_2324 = 3, # currently has condition
-      CSHCN_2324 = 4, # four or five screener criteria
+      CSHCN_2324 = 3, # three screener criteria
       ADHDind_2324 = 1, # does not have condition
       ADHDSevInd_2324 = 1, # does not have condition
       bullied_2324 = 3, # bullied once or twice a month
