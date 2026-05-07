@@ -94,7 +94,7 @@ train_w <- train |>
 # recipe() defines how to prepare the data before fitting.
 # grades_2324 is the outcome; all other columns are predictors.
 recipe_lr <- recipe(grades_2324 ~ ., data = train_w) |>
-
+  
   # Normalise all numeric predictors to mean = 0 and sd = 1.
   # Required because the Ridge penalty treats all variables equally. Without normalisation, variables on larger scales get unfairly penalised.
   step_normalize(all_numeric_predictors())

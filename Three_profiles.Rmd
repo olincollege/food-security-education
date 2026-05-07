@@ -80,7 +80,42 @@ profile_2 <- data.frame(
 
 ## predicting the profile 2 grades using the logistic model `fitted_final`
 ```{r}
-profile_2_pred <-  predict(fitted_final, new_data = profile_1)
+profile_2_pred <-  predict(fitted_final, new_data = profile_2)
 profile_2_pred
 ```
 ### Profile 2 is predicted to have good grades.
+
+## Profile 3 is a 6 year old student who has no reported issues with mental or physical health. However, he has trouble making friends at school and is bullied every day. He occasionally bullies others, too.
+```{r}
+#building the profile
+profile_3 <- data.frame(
+      SpEducPln_2324 = 2, # not on a special ed plan
+      famstruct5_2324 = 2,  # not married parents
+      povlev4_2324 = 4, # 400%+ over poverty level
+      PhysAct_2324 = 1, # does get 60 mins a day exercise
+      FoodCash_2324 = 1, # none
+      sex_2324 = 1, # male
+      age5_2324 = 2, # 4-7 yrs old
+      ChHlthSt_2324 = 1, # very good
+      LowBWght_2324 = 2, # no
+      Cond2more_2324 = 1, #  no condition
+      CSHCN_2324 = 1, # one criteria of special needs
+      ADHDind_2324 = 1, # no adhd
+      ADHDSevInd_2324 = 1, # no condition
+      bullied_2324 = 5, # every day
+      bully_2324 = 3, # twice a month
+      MakeFriend_2324 = 3, # a lot of difficulty
+      MEDB10ScrQ5_2324 = 1, # does not have condition
+      MedCare_2324 = 1, # yes, check up in past year
+      MentHCare_2324 = 3, # no need
+      ReptGrade_2324 = 2, # no
+      FoodSit_2324 = 1, # always enough food
+      HousingInstab_2324 = 1, # did not experience housing insecurity
+      ASDSevInd_2324 = 1, # no ASD
+      case_wt = 1)
+```
+
+```{r}
+profile_3_pred <-  predict(fitted_final, new_data = profile_3)
+profile_3_pred
+```

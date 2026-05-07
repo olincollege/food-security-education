@@ -43,7 +43,7 @@ server <- function(input, output, session) {
       ChHlthSt_2324 = 1, # fair or poor
       LowBWght_2324 = 2, # no
       Cond2more_2324 = 1, # does not have a condition
-      CSHCN_2324 = 4, # four or five screener criteria
+      CSHCN_2324 = 1, #fits one criteria of special needs
       ADHDind_2324 = 1, # does not have condition
       ADHDSevInd_2324 = 1, # does not have condition
       bullied_2324 = 1, # never been bullied in past 12 months
