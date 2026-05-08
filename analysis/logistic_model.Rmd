@@ -193,10 +193,11 @@ ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
 ## Performance
 
 ```{r summary-table}
+# create a summary table for the accuracy and recall
 preds |>
   summarise(
-    accuracy = mean(.pred_class == grades_2324),
-    recall   = recall_vec(truth = grades_2324, estimate = .pred_class,
+    accuracy = mean(.pred_class == grades_2324), # correct predictions out of all predictions
+    recall   = recall_vec(truth = grades_2324, estimate = .pred_class, # how many real cases the model found
                           estimator = "macro")
   ) |>
   mutate(across(everything(), \(x) round(x, 3)))
@@ -212,6 +213,7 @@ To better understand the magnitude of these effects, we use an unregularized log
 ## Binary Outcome
 
 ```{r binary-outcome}
+# create two outcomes, "at risk" and "not at risk"
 df_infer <- df_model |>
   mutate(
     at_risk = factor(
@@ -220,6 +222,7 @@ df_infer <- df_model |>
     )
   )
 
+# count how many are in each category
 df_infer |>
   count(at_risk) |>
   mutate(pct = round(n / sum(n) * 100, 1))
@@ -230,20 +233,23 @@ df_infer |>
 We focused on food security variables while controlling for age, sex, poverty, family structure, and ADHD severity.
 
 ```{r infer-glm}
+# use the top influential variables identified to predict at risk or not at risk grades
 infer_fit <- glm(
   at_risk ~ FoodSit_2324 + FoodCash_2324 +                           
             age5_2324 + sex_2324 + povlev4_2324 + famstruct5_2324 +  
             ADHDSevInd_2324,                                          
   data   = df_infer,
-  family = binomial
+  family = binomial # two outcomes
 )
 
+# summary of the model
 summary(infer_fit)
 ```
 
 ## Results
 
 ```{r odds-ratios}
+# compute odds ratios of children having at risk grades for each factor in the model
 odds_ratios <- tidy(infer_fit, exponentiate = TRUE, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(
@@ -255,6 +261,7 @@ odds_ratios <- tidy(infer_fit, exponentiate = TRUE, conf.int = TRUE) |>
   ) |>
   arrange(desc(estimate))
 
+# show the odds of a student haveing at risk grades in each category
 odds_ratios |>
   select(term, estimate, conf.low, conf.high, p.value, role) |>
   mutate(across(where(is.numeric), \(x) round(x, 3)))
@@ -263,6 +270,8 @@ odds_ratios |>
 ## Visualizing Effects
 
 ```{r or-plot, fig.height=4, fig.width=7}
+# treating food security variables, FoodSit and FoodCash, as the focal points, look at the odds in comparison to other influential variables
+
 ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)) +
   geom_point(size = 3) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2) +
@@ -282,6 +291,8 @@ ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)
 
 ## Blog Summary Statistics
 ```{r blog-stats}
+
+# create statistics about the data for the blog
 blog_stats <- list(
   n_children        = scales::comma(nrow(df_model)),
   pct_food_insecure = scales::percent(mean(df_model$FoodSit_2324 %in% c(3, 4)), accuracy = 0.1),
@@ -292,6 +303,7 @@ blog_stats <- list(
 
 ## Prepare Blog Prediction Objects
 ```{r blog-preds}
+# preparing for using the model in the blog
 test_preds <- preds
 
 test_probs <- predict(fitted_final, new_data = test, type = "prob") |>
@@ -300,6 +312,7 @@ test_probs <- predict(fitted_final, new_data = test, type = "prob") |>
 
 ## Saving Model
 ```{r save-all} 
+# save models in models folder 
 saveRDS(fitted_final,  "../models/Logist_Regression_model.rds")
 saveRDS(fitted_final,  "../models/fitted_final.rds")
 saveRDS(odds_ratios,   "../models/odds_ratios.rds")
