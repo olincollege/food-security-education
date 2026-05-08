@@ -17,7 +17,7 @@ library(broom)
 
 # Data Preparation
 ```{r}
-#run clean_data.Rmd first
+#run clean_data.Rmd (data folder) first
 df_model <- df_23_24_clean |>
   mutate(grades_2324 = factor(
     grades_2324, 
@@ -36,8 +36,11 @@ round(prop.table(table(df_model$grades_2324)) * 100, 1)
 # Data Splitting
 
 ```{r split}
-set.seed(21)  
+set.seed(21) #making code reproducible
 
+# split the data into training and test datasets
+# 70% is used to train the model
+# 30% is used to test how well the model performs
 
 split <- initial_split(df_model, prop = 0.70, strata = grades_2324)
 train <- training(split)   
@@ -51,7 +54,7 @@ nrow(test)
 
 # Class Imbalance Handling
 
-Because the lower-grade classes are less common, I used class weights so the model gives them more attention during training.
+Because the lower-grade classes are less common, so we used class weights so the model gives them more attention during training.
 
 ```{r class-weights}
 n_total <- nrow(train)
@@ -65,7 +68,7 @@ train_w <- train |>
   mutate(
     case_wt = importance_weights(
       as.numeric(weights_lookup[as.character(grades_2324)])
-    )
+      )
   )
 ```
 
@@ -75,16 +78,14 @@ train_w <- train |>
 
 ```{r recipe-and-model}
 recipe_lr <- recipe(grades_2324 ~ ., data = train_w) |>
-  step_normalize(all_numeric_predictors())
+  step_normalize(all_numeric_predictors()) #Normalize numeric variables, which puts all numbers on a similar scale
 
-
-lr_spec <- multinom_reg(
-  penalty = tune(),
-  mixture = 0
-) |>
+lr_spec <- multinom_reg( #build the logistic regression model
+  penalty = tune(), #the penalty helps reduce overfitting
+  mixture = 0) |>
   set_engine("glmnet")
 
-lr_wf <- workflow() |>
+lr_wf <- workflow() |> # combine the recipe and the model into one workflow
   add_recipe(recipe_lr) |>
   add_model(lr_spec) |>
   add_case_weights(case_wt)
@@ -97,10 +98,10 @@ lr_wf <- workflow() |>
 We optimize the penalty parameter using 5-fold cross-validation, with macro recall as our primary metric.
 
 ```{r tune, message=FALSE, warning=FALSE}
-cv_folds <- vfold_cv(train_w, v = 5, strata = grades_2324)
+cv_folds <- vfold_cv(train_w, v = 5, strata = grades_2324) #create 5 different folds for cross-validation to find the best version
 
 set.seed(21)
-penalty_grid <- grid_random(penalty(), size = 20)
+penalty_grid <- grid_random(penalty(), size = 20) #try different penalty values to find which one gives the best recall
 
 set.seed(21)
 lr_tune <- tune_grid(
@@ -110,15 +111,13 @@ lr_tune <- tune_grid(
   metrics   = metric_set(recall)
 )
 
-show_best(lr_tune, metric = "recall", n = 5)
+show_best(lr_tune, metric = "recall", n = 5) 
 ```
 
 ```{r tune-plot, fig.height=4, fig.width=6}
 autoplot(lr_tune) +
   labs(
-    title    = "Tuning Curve: Macro Recall vs Penalty",
-    subtitle = "Averaged across 5-fold CV"
-  )
+    title    = "Tuning Curve: Macro Recall vs Penalty: Averaged across 5-fold CV")
 ```
 
 ---
@@ -126,16 +125,15 @@ autoplot(lr_tune) +
 # Fit
 
 ```{r final-fit, message=FALSE, warning=FALSE}
-best_penalty <- select_best(lr_tune, metric = "recall")
+best_penalty <- select_best(lr_tune, metric = "recall") #select the best penalty value
 cat("Optimal penalty:", round(best_penalty$penalty, 5), "\n")
 
 final_wf <- lr_wf |> finalize_workflow(best_penalty)
 
-final_fit <- last_fit(
+final_fit <- last_fit( #fit the final model using the best settings
   final_wf,
   split   = split,
-  metrics = metric_set(accuracy, recall)
-)
+  metrics = metric_set(accuracy, recall))
 ```
 
 ---
@@ -146,17 +144,19 @@ final_fit <- last_fit(
 # Manual fit to extract predictions (handling case weight limitations in last_fit)
 fitted_final <- final_wf |> fit(data = train_w)
 
-preds <- predict(fitted_final, new_data = test) |>
+preds <- predict(fitted_final, new_data = test) |> #generate predictions on the test data to compare predicted grades with real grades
   bind_cols(test |> select(grades_2324))
 
 cm <- conf_mat(preds, truth = grades_2324, estimate = .pred_class)
 
-autoplot(cm, type = "heatmap") +
+autoplot(cm, type = "heatmap") + #create a confusion matrix, which shows where the model predicted correctly and the mistakes made
   labs(
     title    = "Confusion Matrix")
 ```
 
 ```{r class-report}
+# Measure model performance:  Precision = how often predictions are correct, recall = how many real cases the model found, F1-score = balance between precision and recall
+
 cm |>
   summary() |>
   filter(.metric %in% c("sensitivity", "precision", "f_meas")) |>
@@ -169,6 +169,8 @@ cm |>
 # Variable Importance
 
 ```{r vip-plot, fig.height=6, fig.width=7, message=FALSE, warning=FALSE}
+
+# Show the most important variables in the model
 vip_data <- fitted_final |>
   extract_fit_parsnip() |>
   vi() |>
@@ -177,8 +179,7 @@ vip_data <- fitted_final |>
 ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
   geom_col() +
   labs(
-    title    = "Top 20 Predictors",
-    subtitle = "Based on Ridge regression importance scores",
+    title    = "Top 20 Predictors based on Ridge regression importance scores",
     x = "Importance", y = NULL, fill = NULL
   ) +
   theme(legend.position = "bottom") +
