@@ -25,11 +25,6 @@ model_data <- nsch_data |>
   select(bullied_2324, FoodSit_2324, grades6to11_2324, ADHDSevInd_2324)
 ```
 
-Model with all variables
-```{r}
-
-```
-
 
 Clean up the data
 ```{r}

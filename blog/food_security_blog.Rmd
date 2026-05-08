@@ -18,19 +18,19 @@ library(shiny)
 library(scales)
 library(readr)
 
-# Load saved model objects
+#load saved model objects
 odds_ratios  <- readRDS("../models/odds_ratios.rds")
 fitted_final <- readRDS("../models/fitted_final.rds")
 vip_data     <- readRDS("../models/vip_data.rds")
 
-# Pull key odds ratios for inline use
+#pull key odds ratios for inline use
 or_foodsit  <- odds_ratios |> filter(term == "FoodSit_2324")  |> pull(estimate) |> round(2)
 or_foodcash <- odds_ratios |> filter(term == "FoodCash_2324") |> pull(estimate) |> round(2)
 
-# Load test-set predictions for model performance visualizations
-test_preds <- readRDS("../models/test_preds.rds")   # .pred_class + grades_2324
-test_probs <- readRDS("../models/test_probs.rds")   # probabilities + grades_2324 already included
-roc_data   <- test_probs                  # already contains truth column
+#load test-set predictions for model performance visualizations
+test_preds <- readRDS("../models/test_preds.rds") #.pred_class + grades_2324
+test_probs <- readRDS("../models/test_probs.rds") #probabilities + grades_2324 already included
+roc_data   <- test_probs                  
 cm_blog    <- conf_mat(test_preds, truth = grades_2324, estimate = .pred_class)
 
 macro_recall <- recall(
@@ -39,7 +39,7 @@ macro_recall <- recall(
 ```
 
 ```{r data-stats, include=FALSE}
-# Load pre-computed statistics from the actual model dataset (54,709 children after na.omit)
+#load pre-computed statistics from the actual model dataset (54,709 children after na.omit)
 blog_stats        <- readRDS("../models/blog_stats.rds")
 n_children        <- blog_stats$n_children
 pct_food_insecure <- blog_stats$pct_food_insecure
@@ -75,21 +75,16 @@ For this project, we used the **2023–2024 survey cycle**, the most recent data
 div(class = "stat-grid",
   div(class = "stat-card",
     div(class = "stat-number", n_children),
-    div(class = "stat-label", "children in our analysis")
-  ),
+    div(class = "stat-label", "children in our analysis")),
   div(class = "stat-card orange",
     div(class = "stat-number", pct_food_insecure),
-    div(class = "stat-label", "reported food insecurity (sometimes or often not enough food)")
-  ),
+    div(class = "stat-label", "reported food insecurity (sometimes or often not enough food)")),
   div(class = "stat-card green",
     div(class = "stat-number", pct_food_assist),
-    div(class = "stat-label", "families rely on food or cash assistance")
-  ),
+    div(class = "stat-label", "families rely on food or cash assistance")),
   div(class = "stat-card red",
     div(class = "stat-number", pct_at_risk),
-    div(class = "stat-label", "received Fair or Poor grades")
-  )
-)
+    div(class = "stat-label", "received Fair or Poor grades")))
 ```
 
 ---
@@ -148,31 +143,22 @@ div(class = "factor-grid",
     p(class = "factor-desc",
       "How often does the family have enough nutritious food? Ranges from",
       em("\"always enough\""), "to", em("\"often not enough.\""),
-      "This is the central variable in our analysis."
-    )
-  ),
+      "This is the central variable in our analysis.")),
   div(class = "factor-card orange",
     div(class = "factor-title", "Economic Need"),
     p(class = "factor-desc",
       "Poverty level relative to the federal poverty line, and how many types of food or",
-      "cash assistance the family relies on."
-    )
-  ),
+      "cash assistance the family relies on.")),
   div(class = "factor-card green",
     div(class = "factor-title", "Health & Development"),
     p(class = "factor-desc",
       "Whether the child has an ADHD diagnosis (and its severity), a special education plan,",
-      "2 or more health conditions, or other developmental needs that may affect school performance."
-    )
-  ),
+      "2 or more health conditions, or other developmental needs that may affect school performance.")),
   div(class = "factor-card purple",
     div(class = "factor-title", "Family & Social"),
     p(class = "factor-desc",
       "Family structure (two-parent, single parent, grandparent household, etc.), bullying",
-      "experiences, ability to make friends, and housing instability."
-    )
-  )
-)
+      "experiences, ability to make friends, and housing instability.")))
 ```
 
 ---
@@ -202,7 +188,8 @@ To deal with this issue, we used two main strategies.
 
 **Macro recall as the tuning metric.** Instead of focusing only on accuracy, we used macro recall as our main evaluation metric. Recall (sensitivity) measures how well the model identifies students that truly belong to each grade category. Macro recall gives equal importance to all categories, including the less common ones.
 
-We chose this approach because, in this context, *missing a student who may be struggling is more important than incorrectly identifying a lower-risk student*.
+We chose this approach because, in this context, *not missing a student who may be struggling is more important than incorrectly identifying a lower-risk student.*
+
 
 ---
 
@@ -331,14 +318,13 @@ div(
 
 Both associations are statistically significant (p < 0.001).
 
-> **Note on causality:** These results show associations, not causation. Since the data comes from a cross-sectional survey, we cannot say that food insecurity directly causes lower grades. Other factors that were not measured, such as neighborhood conditions or family stress, may also influence both food insecurity and academic performance.
+> **Note:** These results show associations, not causation. Since the data comes from a cross-sectional survey, we cannot say that food insecurity directly causes lower grades. Other factors that were not measured, such as neighborhood conditions or family stress, may also influence both food insecurity and academic performance.
 
 ---
 
 ### How Food Security Shifts Grade Outcomes
 
-The chart below uses our trained model to show the **predicted grade distribution** across all
-four food security levels. You can adjust the demographic controls on the left to explore how these patterns change across different groups of children.
+The chart below uses our trained model to show the **predicted grade distribution** across all four food security levels. You can adjust the demographic controls on the left to explore how these patterns change across different groups of children.
 
 ```{r interactive-viz, message=FALSE, warning=FALSE}
 shinyApp(
@@ -698,7 +684,7 @@ shinyApp(
         sex_2324           = as.integer(input$sp_sex),
         SpEducPln_2324     = as.integer(input$sp_speducpln),
         PhysAct_2324       = as.integer(input$sp_physact),
-        # All remaining predictors held at non-at-risk defaults
+        #all remaining predictors held at non-at-risk defaults
         ChHlthSt_2324      = 1,
         LowBWght_2324      = 2,
         Cond2more_2324     = 1,
