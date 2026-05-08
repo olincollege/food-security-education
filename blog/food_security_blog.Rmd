@@ -19,17 +19,17 @@ library(scales)
 library(readr)
 
 # Load saved model objects
-odds_ratios  <- readRDS("odds_ratios.rds")
-fitted_final <- readRDS("fitted_final.rds")
-vip_data     <- readRDS("vip_data.rds")
+odds_ratios  <- readRDS("../models/odds_ratios.rds")
+fitted_final <- readRDS("../models/fitted_final.rds")
+vip_data     <- readRDS("../models/vip_data.rds")
 
 # Pull key odds ratios for inline use
 or_foodsit  <- odds_ratios |> filter(term == "FoodSit_2324")  |> pull(estimate) |> round(2)
 or_foodcash <- odds_ratios |> filter(term == "FoodCash_2324") |> pull(estimate) |> round(2)
 
 # Load test-set predictions for model performance visualizations
-test_preds <- readRDS("test_preds.rds")   # .pred_class + grades_2324
-test_probs <- readRDS("test_probs.rds")   # probabilities + grades_2324 already included
+test_preds <- readRDS("../models/test_preds.rds")   # .pred_class + grades_2324
+test_probs <- readRDS("../models/test_probs.rds")   # probabilities + grades_2324 already included
 roc_data   <- test_probs                  # already contains truth column
 cm_blog    <- conf_mat(test_preds, truth = grades_2324, estimate = .pred_class)
 
@@ -40,7 +40,7 @@ macro_recall <- recall(
 
 ```{r data-stats, include=FALSE}
 # Load pre-computed statistics from the actual model dataset (54,709 children after na.omit)
-blog_stats        <- readRDS("blog_stats.rds")
+blog_stats        <- readRDS("../models/blog_stats.rds")
 n_children        <- blog_stats$n_children
 pct_food_insecure <- blog_stats$pct_food_insecure
 pct_at_risk       <- blog_stats$pct_at_risk

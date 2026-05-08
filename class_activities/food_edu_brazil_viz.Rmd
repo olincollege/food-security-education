@@ -6,7 +6,7 @@ output: html_document
 ```{r}
 
 #read the data
-df_port = read.csv("PNAD.csv")
+df_port = read.csv("../data/raw/PNAD.csv")
 
 #load libraries
 library(tidyverse)

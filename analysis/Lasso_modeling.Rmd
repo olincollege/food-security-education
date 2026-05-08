@@ -18,7 +18,7 @@ library(glmnet)
 
 # Load Data
 ```{r}
-df_23_24 <- read_csv("data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
+df_23_24 <- read_csv("../data/raw/2023-2024_NSCH_Topical_CAHMI_DRC.csv")
 
 allfactors_23_24 <- df_23_24 |> 
   select(grades6to11_2324, ChHlthSt_2324, LowBWght_2324, PhysAct_2324, Cond2more_2324, CSHCN_2324, ADHDind_2324, ADHDSevInd_2324, ASDSevInd_2324, bullied_2324, bully_2324, MakeFriend_2324, MEDB10ScrQ5_2324, MedCare_2324, MentHCare_2324, SpEducPln_2324, ReptGrade_2324, povlev4_2324, age5_2324, sex_2324, FoodSit_2324, FoodCash_2324, HousingInstab_2324, famstruct5_2324)

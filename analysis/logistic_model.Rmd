@@ -16,7 +16,20 @@ library(broom)
 ---
 
 # Data Preparation
-run clean_data.Rmd first
+```{r}
+#run clean_data.Rmd first
+df_model <- df_23_24_clean |>
+  mutate(grades_2324 = factor(
+    grades_2324, 
+    levels = c(1, 2, 3, 4),
+    labels = c("Excellent", "Good", "Fair", "Poor")
+  ))
+
+
+cat("Grade distribution (%):\n")
+round(prop.table(table(df_model$grades_2324)) * 100, 1)
+```
+
 
 ---
 
@@ -140,9 +153,7 @@ cm <- conf_mat(preds, truth = grades_2324, estimate = .pred_class)
 
 autoplot(cm, type = "heatmap") +
   labs(
-    title    = "Confusion Matrix",
-    subtitle = "Test set performance (Class-weighted)"
-  )
+    title    = "Confusion Matrix")
 ```
 
 ```{r class-report}
@@ -170,7 +181,8 @@ ggplot(vip_data, aes(x = Importance, y = reorder(Variable, Importance))) +
     subtitle = "Based on Ridge regression importance scores",
     x = "Importance", y = NULL, fill = NULL
   ) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  theme_classic()
 ```
 
 ---
@@ -267,7 +279,31 @@ ggplot(odds_ratios, aes(x = estimate, y = reorder(term, estimate), color = role)
 ```
 
 
+## Blog Summary Statistics
+```{r blog-stats}
+blog_stats <- list(
+  n_children        = scales::comma(nrow(df_model)),
+  pct_food_insecure = scales::percent(mean(df_model$FoodSit_2324 %in% c(3, 4)), accuracy = 0.1),
+  pct_at_risk       = scales::percent(mean(df_infer$at_risk == "at_risk"),        accuracy = 0.1),
+  pct_food_assist   = scales::percent(mean(df_model$FoodCash_2324 %in% c(2, 3)), accuracy = 0.1)
+)
+```
+
+## Prepare Blog Prediction Objects
+```{r blog-preds}
+test_preds <- preds
+
+test_probs <- predict(fitted_final, new_data = test, type = "prob") |>
+  bind_cols(test |> select(grades_2324))
+```
+
 ## Saving Model
-```{r} 
-saveRDS(fitted_final, "Logist_Regression_model.rds")
+```{r save-all} 
+saveRDS(fitted_final,  "../models/Logist_Regression_model.rds")
+saveRDS(fitted_final,  "../models/fitted_final.rds")
+saveRDS(odds_ratios,   "../models/odds_ratios.rds")
+saveRDS(vip_data,      "../models/vip_data.rds")
+saveRDS(test_preds,    "../models/test_preds.rds")
+saveRDS(test_probs,    "../models/test_probs.rds")
+saveRDS(blog_stats,    "../models/blog_stats.rds")
 ```
